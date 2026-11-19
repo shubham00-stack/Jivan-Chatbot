@@ -89,3 +89,10 @@ def get_db():
         yield db
     finally:
         db.close()
+
+def get_db_session():
+    global SessionLocal
+    if SessionLocal is None:
+        initialize_engine()
+        init_db()
+    return SessionLocal()

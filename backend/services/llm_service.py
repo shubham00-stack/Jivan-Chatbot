@@ -14,8 +14,23 @@ class LLMService:
         self._init_clients()
 
     def _init_clients(self):
+        # Check Streamlit Cloud Secrets directly if available
+        try:
+            import streamlit as st
+            if hasattr(st, "secrets"):
+                try:
+                    for k in ("GROQ_API_KEY", "GEMINI_API_KEY", "ANTHROPIC_API_KEY", "LLM_PROVIDER"):
+                        if k in st.secrets:
+                            v = str(st.secrets[k]).strip()
+                            if v:
+                                os.environ[k] = v
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
         # 1. Initialize Google Gemini Client if key present
-        gemini_key = settings.GEMINI_API_KEY or os.getenv("GEMINI_API_KEY")
+        gemini_key = os.getenv("GEMINI_API_KEY") or settings.GEMINI_API_KEY
         if gemini_key:
             try:
                 from google import genai
@@ -25,7 +40,7 @@ class LLMService:
                 logger.warning(f"Could not initialize Gemini client: {e}")
 
         # 2. Initialize Groq Client if key present
-        groq_key = settings.GROQ_API_KEY or os.getenv("GROQ_API_KEY")
+        groq_key = os.getenv("GROQ_API_KEY") or settings.GROQ_API_KEY
         if groq_key:
             try:
                 from openai import OpenAI
@@ -96,6 +111,9 @@ class LLMService:
         Generates response given conversation history and system instructions.
         Tries primary provider first, with automatic cross-provider fallback.
         """
+        if not self.groq_client and not self.gemini_client:
+            self._init_clients()
+
         last_error = None
 
         # 1. Try Groq (if configured as primary or available)
@@ -211,6 +229,9 @@ class LLMService:
         )
         if custom_instructions:
             system_prompt += f"\n\nAdditional Directive: {custom_instructions}"
+
+        if not self.groq_client and not self.anthropic_client:
+            self._init_clients()
 
         # 1. Try Direct Anthropic Claude Client
         if self.anthropic_client:
