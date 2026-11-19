@@ -87,9 +87,46 @@ def ensure_backend_online():
             return True
     return False
 
+def sync_secrets_to_backend():
+    """Continuously ensures keys from Streamlit Cloud Secrets or session state are pushed live to the backend."""
+    try:
+        groq_k = ""
+        gemini_k = ""
+        anthropic_k = ""
+        provider = "groq"
+
+        if hasattr(st, "secrets") and st.secrets:
+            groq_k = st.secrets.get("GROQ_API_KEY", "")
+            gemini_k = st.secrets.get("GEMINI_API_KEY", "")
+            anthropic_k = st.secrets.get("ANTHROPIC_API_KEY", "")
+            provider = st.secrets.get("LLM_PROVIDER", "groq")
+
+        # Session overrides (if configured via Settings tab)
+        if st.session_state.get("groq_key_val"):
+            groq_k = st.session_state["groq_key_val"]
+        if st.session_state.get("gemini_key_val"):
+            gemini_k = st.session_state["gemini_key_val"]
+        if st.session_state.get("claude_key_val"):
+            anthropic_k = st.session_state["claude_key_val"]
+
+        if groq_k or gemini_k:
+            if groq_k: os.environ["GROQ_API_KEY"] = groq_k
+            if gemini_k: os.environ["GEMINI_API_KEY"] = gemini_k
+            if anthropic_k: os.environ["ANTHROPIC_API_KEY"] = anthropic_k
+            if provider: os.environ["LLM_PROVIDER"] = provider
+            api_client.update_keys(
+                groq_key=groq_k,
+                gemini_key=gemini_k,
+                anthropic_key=anthropic_k,
+                provider=provider
+            )
+    except Exception:
+        pass
+
 def main():
     # Ensure backend is online in cloud container
     ensure_backend_online()
+    sync_secrets_to_backend()
 
     # Initialize Session State
     if "theme_mode" not in st.session_state:
