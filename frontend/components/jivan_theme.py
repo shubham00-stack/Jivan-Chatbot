@@ -86,25 +86,12 @@ header[data-testid="stHeader"] {{
 }}
 
 /* =========================================================================
-   2. LEFT SIDEBAR (DEEP NAVY #0A1128) - ALWAYS VISIBLE & EXPANDED
+   2. LEFT SIDEBAR (DEEP NAVY #0A1128) - RESPONSIVE STYLING
    ========================================================================= */
-section[data-testid="stSidebar"],
-section[data-testid="stSidebar"][aria-expanded="false"],
-section[data-testid="stSidebar"][aria-expanded="true"] {{
+section[data-testid="stSidebar"] {{
     background-color: {"#070B16" if is_dark else "#0A1128"} !important;
     color: #FFFFFF !important;
     border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
-    width: 280px !important;
-    min-width: 280px !important;
-    max-width: 280px !important;
-    transform: none !important;
-    margin-left: 0px !important;
-    left: 0px !important;
-    display: block !important;
-    visibility: visible !important;
-    position: relative !important;
-    opacity: 1 !important;
-    z-index: 100 !important;
 }}
 
 section[data-testid="stSidebar"] div[data-testid="stSidebarUserContent"] {{
@@ -633,14 +620,8 @@ div[data-testid="stChatInput"] button:hover {{
 }}
 
 /* =========================================================================
-   6. RIGHT PANEL (SOURCES & DETAILS) - FIXED STICKY POSITION
+   6. RIGHT PANEL (SOURCES & DETAILS)
    ========================================================================= */
-div[data-testid="column"]:nth-of-type(2) {{
-    position: sticky !important;
-    top: 1rem !important;
-    max-height: calc(100vh - 2rem) !important;
-    overflow-y: auto !important;
-}}
 
 .st-key-tab_sources button,
 .st-key-tab_details button {{
@@ -791,6 +772,301 @@ div[data-testid="column"]:nth-of-type(2) {{
     to {{
         opacity: 1;
         transform: translateY(0);
+    }}
+}}
+
+/* =========================================================================
+   8. RESPONSIVE DESIGN FOR ALL DEVICE TYPES (DESKTOP, TABLET, MOBILE, IPHONE)
+   ========================================================================= */
+
+/* -------------------------------------------------------------------------
+   A. DESKTOP & LAPTOP SCREENS (min-width: 993px)
+   ------------------------------------------------------------------------- */
+@media (min-width: 993px) {{
+    /* Left sidebar pinned permanently */
+    section[data-testid="stSidebar"],
+    section[data-testid="stSidebar"][aria-expanded="true"],
+    section[data-testid="stSidebar"][aria-expanded="false"] {{
+        width: 280px !important;
+        min-width: 280px !important;
+        max-width: 280px !important;
+        transform: none !important;
+        margin-left: 0px !important;
+        left: 0px !important;
+        display: block !important;
+        visibility: visible !important;
+        position: relative !important;
+        opacity: 1 !important;
+        z-index: 100 !important;
+    }}
+
+    /* Fixed sticky right context inspector */
+    div[data-testid="column"]:nth-of-type(2) {{
+        position: sticky !important;
+        top: 1rem !important;
+        max-height: calc(100vh - 2rem) !important;
+        overflow-y: auto !important;
+    }}
+
+    /* Hide redundant hamburger on desktop */
+    [data-testid="collapsedControl"] {{
+        display: none !important;
+    }}
+}}
+
+/* -------------------------------------------------------------------------
+   B. TABLET & IPAD SCREENS (769px to 992px)
+   ------------------------------------------------------------------------- */
+@media (max-width: 992px) {{
+    /* Collapsed off-canvas sidebar */
+    section[data-testid="stSidebar"][aria-expanded="false"] {{
+        transform: translateX(-105%) !important;
+        width: 0px !important;
+        min-width: 0px !important;
+        max-width: 0px !important;
+        opacity: 0 !important;
+        visibility: hidden !important;
+        pointer-events: none !important;
+        position: fixed !important;
+        left: -320px !important;
+        transition: transform 0.3s ease, opacity 0.2s ease !important;
+    }}
+
+    /* Smooth off-canvas drawer when opened */
+    section[data-testid="stSidebar"][aria-expanded="true"] {{
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        bottom: 0 !important;
+        height: 100vh !important;
+        width: 85vw !important;
+        max-width: 320px !important;
+        min-width: 260px !important;
+        transform: translateX(0) !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        z-index: 999999 !important;
+        background-color: {"#070B16" if is_dark else "#0A1128"} !important;
+        box-shadow: 6px 0 32px rgba(0, 0, 0, 0.5) !important;
+        transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    }}
+
+    /* Touch-friendly Hamburger button */
+    [data-testid="collapsedControl"] {{
+        display: flex !important;
+        visibility: visible !important;
+        position: fixed !important;
+        top: 12px !important;
+        left: 12px !important;
+        z-index: 99999 !important;
+        background: #008080 !important;
+        color: #FFFFFF !important;
+        width: 44px !important;
+        height: 44px !important;
+        border-radius: 10px !important;
+        align-items: center !important;
+        justify-content: center !important;
+        box-shadow: 0 4px 14px rgba(0, 128, 128, 0.4) !important;
+        border: none !important;
+        cursor: pointer !important;
+    }}
+
+    button[data-testid="stSidebarCollapseButton"] {{
+        display: flex !important;
+        visibility: visible !important;
+        position: absolute !important;
+        top: 12px !important;
+        right: 12px !important;
+        z-index: 9999999 !important;
+        background: rgba(255, 255, 255, 0.12) !important;
+        color: #FFFFFF !important;
+        border-radius: 8px !important;
+        width: 36px !important;
+        height: 36px !important;
+        align-items: center !important;
+        justify-content: center !important;
+        border: none !important;
+    }}
+
+    /* 2-Column Vertical Stacking: Canvas 100% width, Inspector cleanly beneath */
+    div[data-testid="stHorizontalBlock"]:has(> div[data-testid="column"]:nth-of-type(2)) {{
+        flex-direction: column !important;
+        gap: 1.5rem !important;
+    }}
+
+    div[data-testid="stHorizontalBlock"]:has(> div[data-testid="column"]:nth-of-type(2)) > div[data-testid="column"] {{
+        width: 100% !important;
+        min-width: 100% !important;
+        max-width: 100% !important;
+        flex: 1 1 100% !important;
+    }}
+
+    div[data-testid="column"]:nth-of-type(2) {{
+        position: static !important;
+        max-height: none !important;
+        overflow-y: visible !important;
+        margin-top: 1.5rem !important;
+        border-top: 1px solid {"#243048" if is_dark else "#E2E8F0"} !important;
+        padding-top: 1.5rem !important;
+    }}
+}}
+
+/* -------------------------------------------------------------------------
+   C. MOBILE PHONES (<= 768px): IPHONE SAFARI, ANDROID CHROME, PIXEL, GALAXY
+   ------------------------------------------------------------------------- */
+@media (max-width: 768px) {{
+    /* Main Content Edge Padding: maximize space on small screens */
+    .block-container {{
+        padding-top: 4rem !important;
+        padding-bottom: 2rem !important;
+        padding-left: 0.75rem !important;
+        padding-right: 0.75rem !important;
+        max-width: 100% !important;
+    }}
+
+    /* Top bar title and action buttons */
+    .jivan-topbar-title {{
+        font-size: 1.15rem !important;
+    }}
+    .jivan-topbar-subtitle {{
+        font-size: 0.75rem !important;
+    }}
+    .st-key-btn_topbar_pin button,
+    .st-key-btn_topbar_share button,
+    .st-key-btn_topbar_clear button {{
+        font-size: 0.78rem !important;
+        padding: 6px 4px !important;
+        min-height: 38px !important;
+        border-radius: 8px !important;
+    }}
+
+    /* Hero section typography */
+    .jivan-hero-heading {{
+        font-size: 1.5rem !important;
+    }}
+    .jivan-hero-subheading {{
+        font-size: 0.88rem !important;
+        max-width: 100% !important;
+        line-height: 1.45 !important;
+    }}
+    .jivan-hero-bubble {{
+        width: 48px !important;
+        height: 48px !important;
+        font-size: 24px !important;
+        border-radius: 12px !important;
+    }}
+
+    /* Hero suggestions stack full-width for easy thumb tapping */
+    .st-key-pill_code,
+    .st-key-pill_slides,
+    .st-key-pill_art {{
+        width: 100% !important;
+        margin-bottom: 6px !important;
+    }}
+    .st-key-pill_code button,
+    .st-key-pill_slides button,
+    .st-key-pill_art button {{
+        width: 100% !important;
+        font-size: 0.88rem !important;
+        padding: 10px 14px !important;
+        min-height: 44px !important;
+        border-radius: 10px !important;
+    }}
+
+    /* Chat Messages feed */
+    .jivan-user-bubble {{
+        max-width: 88% !important;
+        font-size: 0.92rem !important;
+        padding: 10px 14px !important;
+        border-radius: 16px 16px 4px 16px !important;
+    }}
+    .jivan-ai-card {{
+        padding: 12px 14px !important;
+        font-size: 0.92rem !important;
+        border-radius: 12px !important;
+    }}
+    .jivan-user-avatar,
+    .jivan-ai-avatar {{
+        width: 30px !important;
+        height: 30px !important;
+        font-size: 0.75rem !important;
+    }}
+    .jivan-message-row {{
+        gap: 8px !important;
+        margin-bottom: 14px !important;
+    }}
+
+    /* Floating Composer Toolbar Action Buttons: 40px+ touch targets */
+    .st-key-btn_toggle_attach button,
+    .st-key-btn_toggle_voice button,
+    .st-key-btn_quick_image button,
+    .st-key-btn_quick_slides button,
+    .st-key-btn_quick_code button {{
+        font-size: 0.80rem !important;
+        padding: 7px 4px !important;
+        min-height: 40px !important;
+        border-radius: 8px !important;
+    }}
+
+    /* CRITICAL iOS SAFARI ZOOM PREVENTION: inputs must be >= 16px */
+    div[data-testid="stChatInput"] textarea,
+    input[type="text"],
+    input[type="password"],
+    input[type="email"],
+    textarea,
+    select {{
+        font-size: 16px !important;
+    }}
+
+    /* Chat Input styling on mobile */
+    div[data-testid="stChatInput"] {{
+        padding: 4px 8px !important;
+        border-radius: 12px !important;
+        margin-top: 6px !important;
+    }}
+    div[data-testid="stChatInput"] button {{
+        min-width: 38px !important;
+        min-height: 38px !important;
+    }}
+
+    /* Source & Document cards on mobile */
+    .jivan-source-card {{
+        padding: 10px 12px !important;
+        gap: 10px !important;
+    }}
+    .jivan-doc-badge {{
+        width: 32px !important;
+        height: 32px !important;
+        font-size: 1rem !important;
+    }}
+
+    /* Touch target guarantee for all buttons */
+    button {{
+        min-height: 40px !important;
+    }}
+}}
+
+/* -------------------------------------------------------------------------
+   D. SMALL MOBILE SCREENS (<= 480px): IPHONE SE, COMPACT ANDROID
+   ------------------------------------------------------------------------- */
+@media (max-width: 480px) {{
+    .block-container {{
+        padding-left: 0.5rem !important;
+        padding-right: 0.5rem !important;
+        padding-top: 3.8rem !important;
+    }}
+    .jivan-user-bubble {{
+        max-width: 92% !important;
+    }}
+    .jivan-user-bubble-meta,
+    .jivan-ai-card-meta {{
+        font-size: 0.68rem !important;
+    }}
+    .jivan-source-title {{
+        font-size: 0.84rem !important;
+    }}
+    .jivan-topbar-title {{
+        font-size: 1.05rem !important;
     }}
 }}
 </style>

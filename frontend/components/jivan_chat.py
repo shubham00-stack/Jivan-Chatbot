@@ -21,7 +21,7 @@ from frontend.utils.api_client import api_client
 
 def render_jivan_chat_header(conversation_title: str = "Q2 Sales Overview"):
     time_str = datetime.now().strftime("%I:%M %p")
-    c_title, c_pin, c_share, c_clear = st.columns([0.64, 0.12, 0.12, 0.12])
+    c_title, c_pin, c_share, c_clear = st.columns([0.55, 0.15, 0.15, 0.15])
 
     with c_title:
         st.markdown(

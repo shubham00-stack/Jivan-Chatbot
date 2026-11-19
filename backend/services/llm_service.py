@@ -116,74 +116,99 @@ class LLMService:
 
         last_error = None
 
+        # Candidate models for high-speed Groq inference
+        groq_candidates = [
+            settings.GROQ_MODEL,
+            "llama-3.3-70b-versatile",
+            "llama-3.1-8b-instant",
+            "mixtral-8x7b-32768"
+        ]
+        groq_models = []
+        for m in groq_candidates:
+            if m and m not in groq_models:
+                groq_models.append(m)
+
+        # Candidate models for Google Gemini
+        gemini_candidates = [
+            settings.GEMINI_MODEL,
+            "gemini-2.0-flash",
+            "gemini-1.5-flash",
+            "gemini-1.5-pro"
+        ]
+        gemini_models = []
+        for m in gemini_candidates:
+            if m and m not in gemini_models:
+                gemini_models.append(m)
+
         # 1. Try Groq (if configured as primary or available)
         if (self.provider == "groq" or not self.gemini_client) and self.groq_client:
-            try:
-                groq_msgs = []
-                if system_prompt:
-                    groq_msgs.append({"role": "system", "content": system_prompt})
-                for m in messages:
-                    groq_msgs.append({"role": m["role"], "content": m["content"]})
+            groq_msgs = []
+            if system_prompt:
+                groq_msgs.append({"role": "system", "content": system_prompt})
+            for m in messages:
+                groq_msgs.append({"role": m["role"], "content": m["content"]})
 
-                model_name = settings.OPENAI_MODEL or settings.GROQ_MODEL or "qwen/qwen3.8-27b"
-                completion = self.groq_client.chat.completions.create(
-                    model=model_name,
-                    messages=groq_msgs,
-                    max_tokens=850
-                )
-                return {
-                    "text": completion.choices[0].message.content or "",
-                    "model": f"groq/{model_name}"
-                }
-            except Exception as e:
-                last_error = e
-                logger.error(f"Groq generation error: {e}")
+            for model_name in groq_models:
+                try:
+                    completion = self.groq_client.chat.completions.create(
+                        model=model_name,
+                        messages=groq_msgs,
+                        max_tokens=850
+                    )
+                    return {
+                        "text": completion.choices[0].message.content or "",
+                        "model": f"groq/{model_name}"
+                    }
+                except Exception as e:
+                    last_error = e
+                    logger.warning(f"Groq generation attempt failed with model '{model_name}': {e}")
 
         # 2. Try Google Gemini
         if self.gemini_client:
-            try:
-                full_contents = []
-                if system_prompt:
-                    full_contents.append(f"[System Instruction]: {system_prompt}\n")
-                for m in messages:
-                    prefix = "User" if m["role"] == "user" else "Assistant"
-                    full_contents.append(f"{prefix}: {m['content']}")
+            full_contents = []
+            if system_prompt:
+                full_contents.append(f"[System Instruction]: {system_prompt}\n")
+            for m in messages:
+                prefix = "User" if m["role"] == "user" else "Assistant"
+                full_contents.append(f"{prefix}: {m['content']}")
 
-                prompt_str = "\n\n".join(full_contents)
-                response = self.gemini_client.models.generate_content(
-                    model=settings.GEMINI_MODEL,
-                    contents=prompt_str
-                )
-                return {
-                    "text": response.text or "I processed your request, but did not receive a text response.",
-                    "model": settings.GEMINI_MODEL
-                }
-            except Exception as e:
-                last_error = e
-                logger.error(f"Gemini generation error: {e}")
+            prompt_str = "\n\n".join(full_contents)
+            for model_name in gemini_models:
+                try:
+                    response = self.gemini_client.models.generate_content(
+                        model=model_name,
+                        contents=prompt_str
+                    )
+                    return {
+                        "text": response.text or "I processed your request, but did not receive a text response.",
+                        "model": model_name
+                    }
+                except Exception as e:
+                    last_error = e
+                    logger.warning(f"Gemini generation attempt failed with model '{model_name}': {e}")
 
         # 3. Fallback to Groq if Gemini failed but Groq is available
         if self.groq_client:
-            try:
-                groq_msgs = []
-                if system_prompt:
-                    groq_msgs.append({"role": "system", "content": system_prompt})
-                for m in messages:
-                    groq_msgs.append({"role": m["role"], "content": m["content"]})
+            groq_msgs = []
+            if system_prompt:
+                groq_msgs.append({"role": "system", "content": system_prompt})
+            for m in messages:
+                groq_msgs.append({"role": m["role"], "content": m["content"]})
 
-                model_name = settings.OPENAI_MODEL or settings.GROQ_MODEL or "qwen/qwen3.8-27b"
-                completion = self.groq_client.chat.completions.create(
-                    model=model_name,
-                    messages=groq_msgs,
-                    max_tokens=850
-                )
-                return {
-                    "text": completion.choices[0].message.content or "",
-                    "model": f"groq/{model_name}"
-                }
-            except Exception as e:
-                last_error = e
-                logger.error(f"Groq fallback generation error: {e}")
+            for model_name in groq_models:
+                try:
+                    completion = self.groq_client.chat.completions.create(
+                        model=model_name,
+                        messages=groq_msgs,
+                        max_tokens=850
+                    )
+                    return {
+                        "text": completion.choices[0].message.content or "",
+                        "model": f"groq/{model_name}"
+                    }
+                except Exception as e:
+                    last_error = e
+                    logger.warning(f"Groq fallback generation attempt failed with model '{model_name}': {e}")
 
         # 4. Try Standard OpenAI
         if self.openai_client:
@@ -254,27 +279,39 @@ class LLMService:
             except Exception as e:
                 logger.warning(f"Direct Anthropic Claude API call failed ({e}). Falling back to Claude Persona Engine.")
 
-        # 2. Try Groq (Qwen/Llama) with Claude 3.5 Sonnet Persona
+        # 2. Try Groq (Llama/Mixtral) with Claude 3.5 Sonnet Persona
         if self.groq_client:
-            try:
-                groq_msgs = [{"role": "system", "content": system_prompt}]
-                for m in messages:
-                    groq_msgs.append({"role": m["role"], "content": m["content"]})
+            groq_msgs = [{"role": "system", "content": system_prompt}]
+            for m in messages:
+                groq_msgs.append({"role": m["role"], "content": m["content"]})
 
-                completion = self.groq_client.chat.completions.create(
-                    model=settings.GROQ_MODEL,
-                    messages=groq_msgs,
-                    temperature=0.2,
-                    max_tokens=850
-                )
-                model_used = "Claude-3.5-Sonnet (Groq High-Speed Engine)" if not settings.ANTHROPIC_API_KEY else f"anthropic/{settings.CLAUDE_MODEL}"
-                return {
-                    "text": completion.choices[0].message.content or "",
-                    "model": model_used,
-                    "specialist": "Claude 3.5 Sonnet (Coding Specialist)"
-                }
-            except Exception as e:
-                logger.error(f"Claude Coding Engine error via Groq: {e}")
+            groq_candidates = [
+                settings.GROQ_MODEL,
+                "llama-3.3-70b-versatile",
+                "llama-3.1-8b-instant",
+                "mixtral-8x7b-32768"
+            ]
+            groq_models = []
+            for m in groq_candidates:
+                if m and m not in groq_models:
+                    groq_models.append(m)
+
+            for model_name in groq_models:
+                try:
+                    completion = self.groq_client.chat.completions.create(
+                        model=model_name,
+                        messages=groq_msgs,
+                        temperature=0.2,
+                        max_tokens=850
+                    )
+                    model_used = f"Claude-3.5-Sonnet (Groq {model_name})" if not settings.ANTHROPIC_API_KEY else f"anthropic/{settings.CLAUDE_MODEL}"
+                    return {
+                        "text": completion.choices[0].message.content or "",
+                        "model": model_used,
+                        "specialist": "Claude 3.5 Sonnet (Coding Specialist)"
+                    }
+                except Exception as e:
+                    logger.warning(f"Claude Coding Engine attempt failed on Groq with model '{model_name}': {e}")
 
         # 3. Fallback to Gemini with Claude Persona
         return self.generate_chat_response(messages=messages, system_prompt=system_prompt)

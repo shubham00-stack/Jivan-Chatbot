@@ -17,10 +17,10 @@ try:
         DATABASE_URL: str = "mysql+pymysql://root:password@localhost:3306/multimodal_chatbot"
         SQLITE_FALLBACK_URL: str = "sqlite:///./chatbot.db"
 
-        LLM_PROVIDER: str = "gemini"
+        LLM_PROVIDER: str = "groq"
 
         GEMINI_API_KEY: Optional[str] = None
-        GEMINI_MODEL: str = "gemini-2.5-flash"
+        GEMINI_MODEL: str = "gemini-2.0-flash"
         GEMINI_EMBEDDING_MODEL: str = "text-embedding-004"
 
         OPENAI_API_KEY: Optional[str] = None
@@ -29,7 +29,7 @@ try:
         OPENAI_EMBEDDING_MODEL: str = "text-embedding-3-small"
 
         GROQ_API_KEY: Optional[str] = None
-        GROQ_MODEL: str = "qwen/qwen3.8-27b"
+        GROQ_MODEL: str = "llama-3.3-70b-versatile"
 
         ANTHROPIC_API_KEY: Optional[str] = None
         CLAUDE_MODEL: str = "claude-3-5-sonnet-20241022"
@@ -65,10 +65,10 @@ except Exception:
             self.DATABASE_URL = os.getenv("DATABASE_URL", "mysql+pymysql://root:password@localhost:3306/multimodal_chatbot")
             self.SQLITE_FALLBACK_URL = os.getenv("SQLITE_FALLBACK_URL", "sqlite:///./chatbot.db")
 
-            self.LLM_PROVIDER = os.getenv("LLM_PROVIDER", "gemini")
+            self.LLM_PROVIDER = os.getenv("LLM_PROVIDER", "groq")
 
             self.GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-            self.GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+            self.GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
             self.GEMINI_EMBEDDING_MODEL = os.getenv("GEMINI_EMBEDDING_MODEL", "text-embedding-004")
 
             self.OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
@@ -77,7 +77,7 @@ except Exception:
             self.OPENAI_EMBEDDING_MODEL = os.getenv("OPENAI_EMBEDDING_MODEL", "text-embedding-3-small")
 
             self.GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-            self.GROQ_MODEL = os.getenv("GROQ_MODEL", "qwen/qwen3.8-27b")
+            self.GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
 
             self.ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
             self.CLAUDE_MODEL = os.getenv("CLAUDE_MODEL", "claude-3-5-sonnet-20241022")

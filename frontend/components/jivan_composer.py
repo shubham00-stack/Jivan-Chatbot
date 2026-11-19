@@ -17,16 +17,16 @@ def render_jivan_composer():
 
     with c1:
         attach_active = st.session_state.get("show_attach_tray", False)
-        attach_label = "📎 Hide Attach" if attach_active else "📎 Attach Files"
-        if st.button(attach_label, key="btn_toggle_attach", use_container_width=True):
+        attach_label = "📎 Hide" if attach_active else "📎 Attach"
+        if st.button(attach_label, key="btn_toggle_attach", use_container_width=True, help="Attach files (PDF, images, audio)"):
             st.session_state["show_attach_tray"] = not attach_active
             st.session_state["show_voice_tray"] = False
             st.rerun()
 
     with c2:
         voice_active = st.session_state.get("show_voice_tray", False)
-        voice_label = "🎙️ Hide Voice" if voice_active else "🎙️ Voice Note"
-        if st.button(voice_label, key="btn_toggle_voice", use_container_width=True):
+        voice_label = "🎙️ Hide" if voice_active else "🎙️ Voice"
+        if st.button(voice_label, key="btn_toggle_voice", use_container_width=True, help="Record audio voice note"):
             st.session_state["show_voice_tray"] = not voice_active
             st.session_state["show_attach_tray"] = False
             st.rerun()
