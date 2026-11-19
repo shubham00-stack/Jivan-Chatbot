@@ -29,6 +29,27 @@ from frontend.components.views.tasks_view import render_tasks_view
 from frontend.components.views.templates_view import render_templates_view
 from frontend.components.views.settings_view import render_settings_view
 from frontend.utils.api_client import api_client
+import subprocess
+import time
+
+@st.cache_resource
+def ensure_backend_online():
+    """Ensures the FastAPI backend daemon is running in cloud or single-container environments."""
+    health = api_client.check_health()
+    if health.get("status") == "healthy":
+        return True
+    
+    project_root = str(Path(__file__).resolve().parent.parent)
+    cmd = [sys.executable, "-m", "uvicorn", "backend.main:app", "--host", "127.0.0.1", "--port", "8000"]
+    subprocess.Popen(cmd, cwd=project_root)
+    
+    for _ in range(12):
+        time.sleep(0.5)
+        if api_client.check_health().get("status") == "healthy":
+            return True
+    return False
+
+ensure_backend_online()
 
 # Streamlit Page Setup
 st.set_page_config(
