@@ -10,5 +10,7 @@ root_dir = str(Path(__file__).resolve().parent)
 if root_dir not in sys.path:
     sys.path.insert(0, root_dir)
 
-# Execute the main Streamlit application
-from frontend.streamlit_app import *
+from frontend.streamlit_app import main
+
+if __name__ == "__main__":
+    main()
