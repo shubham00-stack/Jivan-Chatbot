@@ -49,12 +49,37 @@ st.set_page_config(
 @st.cache_resource
 def ensure_backend_online():
     """Ensures the FastAPI backend daemon is running in cloud or single-container environments."""
+    # Bridge Streamlit Secrets to os.environ & .env
+    try:
+        if hasattr(st, "secrets"):
+            env_lines = []
+            for k, v in st.secrets.items():
+                if isinstance(v, str):
+                    os.environ[k] = v
+                    env_lines.append(f"{k}={v}")
+            env_file = repo_root / ".env"
+            if not env_file.exists() and env_lines:
+                with open(env_file, "w", encoding="utf-8") as f:
+                    f.write("\n".join(env_lines) + "\n")
+    except Exception:
+        pass
+
     health = api_client.check_health()
     if health.get("status") == "healthy":
+        # Sync keys from environment to running backend
+        try:
+            api_client.update_keys(
+                groq_key=os.environ.get("GROQ_API_KEY"),
+                gemini_key=os.environ.get("GEMINI_API_KEY"),
+                anthropic_key=os.environ.get("ANTHROPIC_API_KEY"),
+                provider=os.environ.get("LLM_PROVIDER")
+            )
+        except Exception:
+            pass
         return True
     
     cmd = [sys.executable, "-m", "uvicorn", "backend.main:app", "--host", "127.0.0.1", "--port", "8000"]
-    subprocess.Popen(cmd, cwd=str(repo_root))
+    subprocess.Popen(cmd, cwd=str(repo_root), env=os.environ.copy())
     
     for _ in range(16):
         time.sleep(0.5)

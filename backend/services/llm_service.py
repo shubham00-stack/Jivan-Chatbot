@@ -58,6 +58,35 @@ class LLMService:
             except Exception as e:
                 logger.warning(f"Could not initialize Anthropic client: {e}")
 
+    def reload_keys(
+        self,
+        groq_key: Optional[str] = None,
+        gemini_key: Optional[str] = None,
+        anthropic_key: Optional[str] = None,
+        provider: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """Dynamically reloads API credentials at runtime."""
+        if groq_key:
+            os.environ["GROQ_API_KEY"] = groq_key
+            settings.GROQ_API_KEY = groq_key
+        if gemini_key:
+            os.environ["GEMINI_API_KEY"] = gemini_key
+            settings.GEMINI_API_KEY = gemini_key
+        if anthropic_key:
+            os.environ["ANTHROPIC_API_KEY"] = anthropic_key
+            settings.ANTHROPIC_API_KEY = anthropic_key
+        if provider:
+            os.environ["LLM_PROVIDER"] = provider
+            settings.LLM_PROVIDER = provider
+            self.provider = provider.lower()
+        self._init_clients()
+        return {
+            "groq_active": self.groq_client is not None,
+            "gemini_active": self.gemini_client is not None,
+            "anthropic_active": self.anthropic_client is not None,
+            "provider": self.provider
+        }
+
     def generate_chat_response(
         self,
         messages: List[Dict[str, str]],

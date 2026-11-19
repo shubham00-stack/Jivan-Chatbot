@@ -160,4 +160,23 @@ class APIClient:
             logger.warning(f"Could not submit feedback: {e}")
             return False
 
+    def update_keys(
+        self,
+        groq_key: Optional[str] = None,
+        gemini_key: Optional[str] = None,
+        anthropic_key: Optional[str] = None,
+        provider: Optional[str] = None
+    ) -> bool:
+        try:
+            payload = {}
+            if groq_key: payload["groq_api_key"] = groq_key
+            if gemini_key: payload["gemini_api_key"] = gemini_key
+            if anthropic_key: payload["anthropic_api_key"] = anthropic_key
+            if provider: payload["provider"] = provider
+            resp = requests.post(f"{self.base_url}/api/config/keys", json=payload, timeout=5)
+            return resp.status_code == 200
+        except Exception as e:
+            logger.warning(f"Could not update keys: {e}")
+            return False
+
 api_client = APIClient()
