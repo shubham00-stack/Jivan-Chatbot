@@ -1,0 +1,51 @@
+# Environment variables & secrets (CRITICAL: Never commit .env)
+.env
+.env.local
+*.env
+
+# Python artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+ENV/
+build/
+dist/
+*.egg-info/
+
+# Testing & Caches
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+
+# Local databases
+*.db
+*.sqlite
+*.sqlite3
+chatbot.db
+test_chatbot.db
+
+# Local storage, generated assets & test outputs
+storage/
+uploads/
+scratch/
+test_*.pptx
+test_*.pdf
+*.pptx
+*.pdf
+*.log
+
+# Streamlit local credentials
+.streamlit/secrets.toml
+
+# OS & Editor files
+.vscode/
+.idea/
+Thumbs.db
+Desktop.ini
+.DS_Store
