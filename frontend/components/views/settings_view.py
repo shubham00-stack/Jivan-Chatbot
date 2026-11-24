@@ -20,15 +20,17 @@ def render_settings_view():
 
     # 1. Appearance / Theme
     st.markdown("### 🌓 Appearance")
-    curr_theme = st.session_state.get("theme_mode", "bright")
+    curr_theme = st.session_state.get("theme_mode", "light")
     col_t1, col_t2 = st.columns(2)
     with col_t1:
-        if st.button("☀️ Bright Mode (White Canvas)", type="primary" if curr_theme == "bright" else "secondary", use_container_width=True, key="btn_set_bright"):
-            st.session_state["theme_mode"] = "bright"
+        if st.button("☀️ Light Mode (White Canvas)", type="primary" if curr_theme == "light" else "secondary", use_container_width=True, key="btn_set_bright"):
+            st.session_state["theme_mode"] = "light"
+            st.query_params["theme"] = "light"
             st.rerun()
     with col_t2:
-        if st.button("🌙 Dark Mode (Obsidian Navy)", type="primary" if curr_theme == "dark" else "secondary", use_container_width=True, key="btn_set_dark"):
+        if st.button("🌙 Dark Mode (Premium Dark)", type="primary" if curr_theme == "dark" else "secondary", use_container_width=True, key="btn_set_dark"):
             st.session_state["theme_mode"] = "dark"
+            st.query_params["theme"] = "dark"
             st.rerun()
 
     st.divider()

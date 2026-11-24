@@ -1,0 +1,955 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JIVAN Composer</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: transparent;
+      color: #ECECEC;
+      overflow: hidden;
+      padding: 6px 4px 6px 4px;
+    }
+
+    .composer-wrapper {
+      max-width: 860px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    /* =========================================================================
+       1. FLOATING DROPDOWN ATTACHMENT MENU (Opened via Plus Button)
+       Clean white/light-grey in light theme, #202124 in dark theme
+       ========================================================================= */
+    .attachment-menu {
+      display: none;
+      flex-direction: column;
+      gap: 2px;
+      align-self: flex-start;
+      margin-left: 6px;
+      margin-bottom: 8px;
+      min-width: 250px;
+      background: #FFFFFF;
+      border: 1px solid #E1E5EB;
+      border-radius: 16px;
+      padding: 8px;
+      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.12);
+      z-index: 100;
+      animation: menuPopIn 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+      transition: background 0.25s ease, border-color 0.25s ease;
+    }
+
+    body.theme-dark .attachment-menu,
+    [data-theme="dark"] .attachment-menu {
+      background: #202124;
+      border: 1px solid #303030;
+      box-shadow: 0 14px 40px rgba(0, 0, 0, 0.55);
+    }
+
+    .attachment-menu.open {
+      display: flex;
+    }
+
+    @keyframes menuPopIn {
+      from {
+        opacity: 0;
+        transform: translateY(6px) scale(0.97);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    .menu-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 11px 14px;
+      border-radius: 10px;
+      color: #202124;
+      font-size: 0.92rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.18s ease, color 0.18s ease;
+      user-select: none;
+    }
+
+    body.theme-dark .menu-item,
+    [data-theme="dark"] .menu-item {
+      color: #F5F5F5;
+    }
+
+    .menu-item:hover {
+      background: #F0F3F8;
+      color: #202124;
+    }
+
+    body.theme-dark .menu-item:hover,
+    [data-theme="dark"] .menu-item:hover {
+      background: #2A2B2E;
+      color: #FFFFFF;
+    }
+
+    .menu-item svg {
+      width: 20px;
+      height: 20px;
+      stroke: #737780;
+      stroke-width: 2;
+      fill: none;
+      flex-shrink: 0;
+      transition: stroke 0.18s ease;
+    }
+
+    body.theme-dark .menu-item svg,
+    [data-theme="dark"] .menu-item svg {
+      stroke: #A1A1AA;
+    }
+
+    .menu-item:hover svg {
+      stroke: #1D61D2;
+    }
+
+    /* =========================================================================
+       2. MAIN COMPOSER CAPSULE (#212121 Charcoal Background)
+       [+] [ Ask JIVAN................ ] [ 🎙️ ] [ 🔵 ↑ ]
+       ========================================================================= */
+    .composer-card {
+      background-color: #212121;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 28px;
+      padding: 6px 10px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+      transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .composer-card.drag-active {
+      border-color: #1D61D2;
+      background-color: #282828;
+      box-shadow: 0 0 18px rgba(29, 97, 210, 0.45);
+    }
+
+    .composer-card:focus-within {
+      border-color: rgba(255, 255, 255, 0.28);
+      box-shadow: 0 6px 24px rgba(0, 0, 0, 0.45);
+    }
+
+    /* =========================================================================
+       3. ATTACHMENT PREVIEW TRAY (Inside Composer, Above Text Input)
+       ========================================================================= */
+    .previews-container {
+      display: none;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 6px 4px 8px 4px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      margin-bottom: 6px;
+      max-height: 140px;
+      overflow-y: auto;
+    }
+
+    .previews-container.has-files {
+      display: flex;
+    }
+
+    .preview-chip {
+      background: #2C2C2C;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 12px;
+      padding: 5px 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      max-width: 220px;
+      animation: chipFadeIn 0.18s ease-out;
+    }
+
+    @keyframes chipFadeIn {
+      from { opacity: 0; transform: scale(0.92); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    .preview-thumb {
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
+      object-fit: cover;
+      flex-shrink: 0;
+    }
+
+    .preview-doc-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.08);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+      flex-shrink: 0;
+    }
+
+    .preview-meta {
+      overflow: hidden;
+      flex: 1;
+      text-align: left;
+      line-height: 1.25;
+    }
+
+    .preview-name {
+      font-size: 0.78rem;
+      font-weight: 500;
+      color: #ECECEC;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .preview-size {
+      font-size: 0.68rem;
+      color: #9E9E9E;
+    }
+
+    .preview-remove-btn {
+      background: rgba(255, 255, 255, 0.1);
+      border: none;
+      color: #9E9E9E;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: background 0.15s ease, color 0.15s ease;
+    }
+
+    .preview-remove-btn:hover {
+      background: rgba(239, 68, 68, 0.25);
+      color: #EF4444;
+    }
+
+    /* =========================================================================
+       4. INPUT ROW: [+] [Ask JIVAN] [🎙️] [🔵 ↑]
+       ========================================================================= */
+    .input-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      min-height: 42px;
+    }
+
+    /* Plus Button on Extreme Left */
+    .plus-btn {
+      width: 36px;
+      height: 36px;
+      min-width: 36px;
+      min-height: 36px;
+      border-radius: 50%;
+      background: #2D2D2D;
+      border: none;
+      color: #FFFFFF;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: background 0.2s ease, transform 0.15s ease;
+      flex-shrink: 0;
+    }
+
+    .plus-btn:hover {
+      background: #383838;
+      transform: scale(1.05);
+    }
+
+    .plus-btn svg {
+      width: 18px;
+      height: 18px;
+      stroke: #ECECEC;
+      stroke-width: 2.4;
+      fill: none;
+    }
+
+    /* Middle Auto-expanding Textarea */
+    .text-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: #FFFFFF;
+      font-family: inherit;
+      font-size: 0.98rem;
+      line-height: 1.45;
+      resize: none;
+      max-height: 130px;
+      min-height: 24px;
+      padding: 6px 8px;
+      user-select: text;
+    }
+
+    .text-input::placeholder {
+      color: #8E8E8E;
+    }
+
+    /* Microphone Button */
+    .mic-btn {
+      width: 34px;
+      height: 34px;
+      min-width: 34px;
+      min-height: 34px;
+      border-radius: 50%;
+      background: transparent;
+      border: none;
+      color: #ECECEC;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: background 0.15s ease, color 0.15s ease;
+      flex-shrink: 0;
+    }
+
+    .mic-btn:hover {
+      background: rgba(255, 255, 255, 0.12);
+    }
+
+    .mic-btn.recording {
+      background: rgba(239, 68, 68, 0.25);
+      color: #EF4444;
+      animation: pulseRecord 1.2s infinite;
+    }
+
+    @keyframes pulseRecord {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+      100% { transform: scale(1); }
+    }
+
+    .mic-btn svg {
+      width: 19px;
+      height: 19px;
+      stroke: currentColor;
+      stroke-width: 2;
+      fill: none;
+    }
+
+    /* Blue Circular Send Button with Upward Arrow (Extreme Right) */
+    .send-btn {
+      width: 36px;
+      height: 36px;
+      min-width: 36px;
+      min-height: 36px;
+      border-radius: 50%;
+      background: #1D61D2;
+      border: none;
+      color: #FFFFFF;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+      flex-shrink: 0;
+      box-shadow: 0 2px 8px rgba(29, 97, 210, 0.45);
+    }
+
+    .send-btn:hover:not(:disabled) {
+      background: #1852B5;
+      transform: scale(1.06);
+      box-shadow: 0 4px 14px rgba(29, 97, 210, 0.6);
+    }
+
+    .send-btn:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+      box-shadow: none;
+      transform: none;
+    }
+
+    .send-btn.loading {
+      cursor: wait !important;
+      opacity: 0.9 !important;
+      background: #1852B5 !important;
+      box-shadow: 0 0 12px rgba(29, 97, 210, 0.6) !important;
+    }
+
+    .send-btn.loading svg {
+      animation: spinSend 0.8s linear infinite !important;
+    }
+
+    @keyframes spinSend {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .send-btn svg {
+      width: 17px;
+      height: 17px;
+      stroke: #FFFFFF;
+      stroke-width: 2.6;
+      fill: none;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    /* Voice Recording Banner */
+    .recording-banner {
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      border-radius: 10px;
+      padding: 6px 12px;
+      margin-bottom: 6px;
+      font-size: 0.82rem;
+      color: #F87171;
+    }
+
+    .recording-banner.active {
+      display: flex;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="composer-wrapper" id="composer-wrapper">
+
+    <!-- Floating Dropdown Menu (Opened via Plus Button) -->
+    <div class="attachment-menu" id="attachment-menu">
+      
+      <!-- Option 1: Add Photos & Files -->
+      <div class="menu-item" id="opt-photos-files" title="Select photos, documents, and spreadsheets">
+        <svg viewBox="0 0 24 24"><path d="M4 22h14a2 2 0 0 0 2-2V7.5L14.5 2H6a2 2 0 0 0-2 2v4"/><polyline points="14 2 14 8 20 8"/><path d="M2 15h6"/><path d="M5 12v6"/></svg>
+        <span>Add Photos & Files</span>
+      </div>
+
+      <!-- Option 2: Upload from Device -->
+      <div class="menu-item" id="opt-upload-device" title="Browse documents and files from device">
+        <svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+        <span>Upload from Device</span>
+      </div>
+
+      <!-- Option 3: Take Photo -->
+      <div class="menu-item" id="opt-take-photo" title="Capture photo with camera">
+        <svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+        <span>Take Photo</span>
+      </div>
+    </div>
+
+    <!-- Hidden Native File Inputs -->
+    <input type="file" id="file-input-all" multiple accept="image/*,.pdf,.doc,.docx,.txt,.xls,.xlsx,.csv,.ppt,.pptx,.mp3,.wav,.m4a" style="display:none;" />
+    <input type="file" id="file-input-device" multiple accept=".pdf,.doc,.docx,.txt,.xls,.xlsx,.csv,.ppt,.pptx" style="display:none;" />
+    <input type="file" id="file-input-camera" accept="image/*" capture="environment" style="display:none;" />
+
+    <!-- Main Message Composer (#212121 Charcoal Pill) -->
+    <div class="composer-card" id="composer-card">
+      
+      <!-- Voice Recording Live Status Banner -->
+      <div class="recording-banner" id="recording-banner">
+        <span>🔴 Recording voice query... <strong id="recording-timer">00:00</strong></span>
+        <span style="cursor: pointer; text-decoration: underline;" id="btn-cancel-rec">Cancel</span>
+      </div>
+
+      <!-- Attachment Previews Tray (Thumbnails & Document Badges) -->
+      <div class="previews-container" id="previews-container"></div>
+
+      <!-- Composer Input Row: [+] [Ask JIVAN] [🎙️] [🔵 ↑] -->
+      <div class="input-row">
+        <!-- Plus (+) Button on Extreme Left -->
+        <button class="plus-btn" id="plus-btn" type="button" title="Add attachments">
+          <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+        </button>
+
+        <!-- Center Textarea with Placeholder 'Ask JIVAN' -->
+        <textarea class="text-input" id="text-input" placeholder="Ask JIVAN" rows="1"></textarea>
+
+        <!-- Microphone Button -->
+        <button class="mic-btn" id="mic-btn" type="button" title="Voice input">
+          <svg viewBox="0 0 24 24"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+        </button>
+
+        <!-- Blue Circular Send Button with Upward Arrow (Extreme Right) -->
+        <button class="send-btn" id="send-btn" type="button" disabled title="Send message">
+          <svg viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+        </button>
+      </div>
+
+    </div>
+
+  </div>
+
+  <script>
+    // Streamlit Component Protocol & Submission State Tracker
+    let isSubmitting = false;
+
+    function notifyFrameHeight() {
+      requestAnimationFrame(() => {
+        const wrapper = document.getElementById('composer-wrapper');
+        if (!wrapper) return;
+        const h = wrapper.offsetHeight + 14;
+        window.parent.postMessage({
+          isStreamlitMessage: true,
+          type: 'streamlit:setFrameHeight',
+          height: Math.max(h, 56)
+        }, '*');
+      });
+    }
+
+    function sendReadySignal() {
+      window.parent.postMessage({
+        isStreamlitMessage: true,
+        type: 'streamlit:componentReady',
+        apiVersion: 1
+      }, '*');
+    }
+
+    function sendToStreamlit(data) {
+      window.parent.postMessage({
+        isStreamlitMessage: true,
+        type: 'streamlit:setComponentValue',
+        value: data
+      }, '*');
+    }
+
+    // Component ready signal sent on mount
+    sendReadySignal();
+
+    // Handle Streamlit render messages (theme update, response rendering completed)
+    window.addEventListener('message', (event) => {
+      if (event.data && event.data.type === 'streamlit:render') {
+        // Always affirm readiness to Streamlit widget manager so subsequent submissions are accepted
+        sendReadySignal();
+
+        const args = event.data.args || {};
+        const isDarkTheme = (args.theme === 'dark');
+        if (isDarkTheme) {
+          document.body.classList.add('theme-dark');
+          document.body.classList.remove('theme-light', 'theme-bright');
+          document.documentElement.setAttribute('data-theme', 'dark');
+        } else {
+          document.body.classList.remove('theme-dark');
+          document.body.classList.add('theme-light');
+          document.documentElement.setAttribute('data-theme', 'light');
+        }
+
+        // Response or rerun has completed: release submission lock
+        isSubmitting = false;
+
+        if (args.default_prompt && !textInput.value) {
+          textInput.value = args.default_prompt;
+        }
+        updateSendState();
+        notifyFrameHeight();
+      }
+    });
+
+    // Check initial theme from parent on startup
+    try {
+      const parentTheme = window.parent.localStorage.getItem('jivan_theme');
+      if (parentTheme === 'dark') {
+        document.body.classList.add('theme-dark');
+        document.documentElement.setAttribute('data-theme', 'dark');
+      } else if (parentTheme === 'light') {
+        document.body.classList.add('theme-light');
+        document.documentElement.setAttribute('data-theme', 'light');
+      }
+    } catch(e) {}
+
+    // DOM Elements
+    const plusBtn = document.getElementById('plus-btn');
+    const attachmentMenu = document.getElementById('attachment-menu');
+    const textInput = document.getElementById('text-input');
+    const sendBtn = document.getElementById('send-btn');
+    const micBtn = document.getElementById('mic-btn');
+    const previewsContainer = document.getElementById('previews-container');
+    const composerCard = document.getElementById('composer-card');
+
+    const optPhotosFiles = document.getElementById('opt-photos-files');
+    const optUploadDevice = document.getElementById('opt-upload-device');
+    const optTakePhoto = document.getElementById('opt-take-photo');
+
+    const fileInputAll = document.getElementById('file-input-all');
+    const fileInputDevice = document.getElementById('file-input-device');
+    const fileInputCamera = document.getElementById('file-input-camera');
+
+    const recordingBanner = document.getElementById('recording-banner');
+    const recordingTimer = document.getElementById('recording-timer');
+    const btnCancelRec = document.getElementById('btn-cancel-rec');
+
+    // Staged Attachments
+    let stagedFiles = [];
+    let mediaRecorder = null;
+    let audioChunks = [];
+    let recordingInterval = null;
+    let recordingSecs = 0;
+
+    function formatSize(bytes) {
+      if (bytes < 1024) return bytes + ' B';
+      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+      return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    }
+
+    function getFileMeta(name) {
+      const ext = name.split('.').pop().toLowerCase();
+      if (['png', 'jpg', 'jpeg', 'webp', 'gif'].includes(ext)) {
+        return { type: 'image', icon: '🖼️', ext: ext.toUpperCase() };
+      }
+      if (['pdf'].includes(ext)) return { type: 'document', icon: '📕', ext: 'PDF' };
+      if (['docx', 'doc'].includes(ext)) return { type: 'document', icon: '📘', ext: 'DOCX' };
+      if (['xlsx', 'xls', 'csv'].includes(ext)) return { type: 'document', icon: '📗', ext: ext.toUpperCase() };
+      if (['pptx', 'ppt'].includes(ext)) return { type: 'document', icon: '📙', ext: 'PPTX' };
+      if (['mp3', 'wav', 'm4a', 'ogg'].includes(ext)) return { type: 'audio', icon: '🎙️', ext: ext.toUpperCase() };
+      return { type: 'document', icon: '📄', ext: ext.toUpperCase() || 'FILE' };
+    }
+
+    function updateSendState() {
+      const hasText = textInput.value.trim().length > 0;
+      const hasAttachments = stagedFiles.length > 0;
+      const canSend = (hasText || hasAttachments) && !isSubmitting;
+      
+      sendBtn.disabled = !canSend;
+      if (isSubmitting) {
+        sendBtn.classList.add('loading');
+        sendBtn.title = 'Sending message...';
+      } else {
+        sendBtn.classList.remove('loading');
+        sendBtn.title = canSend ? 'Send message' : 'Ask JIVAN (type a message or add attachments)';
+      }
+      notifyFrameHeight();
+    }
+
+    function renderPreviews() {
+      previewsContainer.innerHTML = '';
+      if (stagedFiles.length === 0) {
+        previewsContainer.classList.remove('has-files');
+        updateSendState();
+        return;
+      }
+
+      previewsContainer.classList.add('has-files');
+      stagedFiles.forEach((fileObj, idx) => {
+        const chip = document.createElement('div');
+        chip.className = 'preview-chip';
+
+        let previewVisual = '';
+        if (fileObj.type === 'image' && fileObj.dataUrl) {
+          previewVisual = `<img src="${fileObj.dataUrl}" class="preview-thumb" alt="${fileObj.name}" />`;
+        } else {
+          previewVisual = `<div class="preview-doc-icon">${fileObj.icon}</div>`;
+        }
+
+        chip.innerHTML = `
+          ${previewVisual}
+          <div class="preview-meta">
+            <div class="preview-name" title="${fileObj.name}">${fileObj.name}</div>
+            <div class="preview-size">${fileObj.ext} • ${formatSize(fileObj.size)}</div>
+          </div>
+          <button class="preview-remove-btn" title="Remove attachment" type="button" data-idx="${idx}">✕</button>
+        `;
+
+        chip.querySelector('.preview-remove-btn').addEventListener('click', (e) => {
+          e.stopPropagation();
+          stagedFiles.splice(idx, 1);
+          renderPreviews();
+        });
+
+        previewsContainer.appendChild(chip);
+      });
+
+      updateSendState();
+    }
+
+    function handleFileSelection(files) {
+      if (!files || files.length === 0) return;
+
+      Array.from(files).forEach(file => {
+        // Prevent duplicate file by name + size
+        if (stagedFiles.some(f => f.name === file.name && f.size === file.size)) return;
+        
+        // 25 MB Limit
+        if (file.size > 25 * 1024 * 1024) {
+          alert(`File "${file.name}" exceeds the 25 MB limit.`);
+          return;
+        }
+
+        const meta = getFileMeta(file.name);
+        const reader = new FileReader();
+
+        reader.onload = function(e) {
+          const rawResult = e.target.result;
+          let base64Data = '';
+          if (rawResult.includes(',')) {
+            base64Data = rawResult.split(',')[1];
+          }
+
+          stagedFiles.push({
+            name: file.name,
+            size: file.size,
+            type: meta.type,
+            icon: meta.icon,
+            ext: meta.ext,
+            dataUrl: (meta.type === 'image') ? rawResult : null,
+            base64: base64Data
+          });
+
+          renderPreviews();
+        };
+
+        reader.readAsDataURL(file);
+      });
+
+      closeMenu();
+    }
+
+    // Toggle Dropdown Menu
+    function toggleMenu() {
+      if (attachmentMenu.classList.contains('open')) {
+        closeMenu();
+      } else {
+        openMenu();
+      }
+    }
+
+    function openMenu() {
+      attachmentMenu.classList.add('open');
+      notifyFrameHeight();
+    }
+
+    function closeMenu() {
+      attachmentMenu.classList.remove('open');
+      notifyFrameHeight();
+    }
+
+    // Plus Button Click
+    plusBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleMenu();
+    });
+
+    // Close when clicking outside within iframe or on blur
+    document.addEventListener('click', (e) => {
+      if (!attachmentMenu.contains(e.target) && e.target !== plusBtn && !plusBtn.contains(e.target)) {
+        closeMenu();
+      }
+    });
+
+    window.addEventListener('blur', () => {
+      closeMenu();
+    });
+
+    // Option 1: Add Photos & Files
+    optPhotosFiles.addEventListener('click', (e) => {
+      e.stopPropagation();
+      fileInputAll.value = '';
+      fileInputAll.click();
+    });
+    fileInputAll.addEventListener('change', (e) => handleFileSelection(e.target.files));
+
+    // Option 2: Upload from Device
+    optUploadDevice.addEventListener('click', (e) => {
+      e.stopPropagation();
+      fileInputDevice.value = '';
+      fileInputDevice.click();
+    });
+    fileInputDevice.addEventListener('change', (e) => handleFileSelection(e.target.files));
+
+    // Option 3: Take Photo
+    optTakePhoto.addEventListener('click', (e) => {
+      e.stopPropagation();
+      fileInputCamera.value = '';
+      fileInputCamera.click();
+    });
+    fileInputCamera.addEventListener('change', (e) => handleFileSelection(e.target.files));
+
+    // Drag & Drop
+    ['dragenter', 'dragover'].forEach(eventName => {
+      composerCard.addEventListener(eventName, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        composerCard.classList.add('drag-active');
+      });
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+      composerCard.addEventListener(eventName, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        composerCard.classList.remove('drag-active');
+      });
+    });
+
+    composerCard.addEventListener('drop', (e) => {
+      if (e.dataTransfer && e.dataTransfer.files) {
+        handleFileSelection(e.dataTransfer.files);
+      }
+    });
+
+    // Auto-grow Textarea and real-time validation on all input events
+    ['input', 'keyup', 'change', 'paste', 'cut'].forEach(evt => {
+      textInput.addEventListener(evt, () => {
+        textInput.style.height = 'auto';
+        textInput.style.height = Math.min(textInput.scrollHeight, 130) + 'px';
+        updateSendState();
+      });
+    });
+
+    // Keyboard handling: Enter to send, Shift+Enter for newline
+    textInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        if (!sendBtn.disabled && !isSubmitting) {
+          submitMessage();
+        }
+      }
+    });
+
+    // Send Button Click
+    sendBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (!sendBtn.disabled && !isSubmitting) {
+        submitMessage();
+      }
+    });
+
+    // Submit Message & Attachments
+    function submitMessage() {
+      if (isSubmitting) return;
+
+      const text = textInput.value.trim();
+      if (!text && stagedFiles.length === 0) return;
+
+      isSubmitting = true;
+      updateSendState();
+
+      const payload = {
+        id: Date.now().toString() + '_' + Math.random().toString(36).substring(2, 9),
+        text: text,
+        attachments: stagedFiles.map(f => ({
+          name: f.name,
+          size: f.size,
+          type: f.type,
+          ext: f.ext,
+          base64: f.base64
+        }))
+      };
+
+      // Reset local state
+      textInput.value = '';
+      textInput.style.height = 'auto';
+      stagedFiles = [];
+      renderPreviews();
+      closeMenu();
+
+      // Transmit payload to Streamlit
+      sendToStreamlit(payload);
+    }
+
+    // Microphone Voice Recording via MediaRecorder
+    micBtn.addEventListener('click', () => {
+      if (mediaRecorder && mediaRecorder.state === 'recording') {
+        stopVoiceRecording();
+      } else {
+        startVoiceRecording();
+      }
+    });
+
+    btnCancelRec.addEventListener('click', () => {
+      cancelVoiceRecording();
+    });
+
+    function startVoiceRecording() {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        alert('Microphone recording is not supported in this environment.');
+        return;
+      }
+
+      navigator.mediaDevices.getUserMedia({ audio: true })
+        .then(stream => {
+          audioChunks = [];
+          mediaRecorder = new MediaRecorder(stream);
+          mediaRecorder.ondataavailable = e => { if (e.data.size > 0) audioChunks.push(e.data); };
+          mediaRecorder.onstop = () => {
+            const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+            stream.getTracks().forEach(track => track.stop());
+            if (audioChunks.length > 0) {
+              const reader = new FileReader();
+              reader.onloadend = () => {
+                const b64 = reader.result.split(',')[1];
+                stagedFiles.push({
+                  name: `voice_memo_${Date.now().toString().slice(-4)}.wav`,
+                  size: audioBlob.size,
+                  type: 'audio',
+                  icon: '🎙️',
+                  ext: 'WAV',
+                  base64: b64
+                });
+                renderPreviews();
+              };
+              reader.readAsDataURL(audioBlob);
+            }
+          };
+
+          mediaRecorder.start();
+          micBtn.classList.add('recording');
+          recordingBanner.classList.add('active');
+          recordingSecs = 0;
+          recordingTimer.textContent = '00:00';
+          recordingInterval = setInterval(() => {
+            recordingSecs++;
+            const m = String(Math.floor(recordingSecs / 60)).padStart(2, '0');
+            const s = String(recordingSecs % 60).padStart(2, '0');
+            recordingTimer.textContent = `${m}:${s}`;
+          }, 1000);
+          notifyFrameHeight();
+        })
+        .catch(err => {
+          alert('Microphone access was denied or not found: ' + err.message);
+        });
+    }
+
+    function stopVoiceRecording() {
+      if (mediaRecorder && mediaRecorder.state === 'recording') {
+        mediaRecorder.stop();
+      }
+      cleanupRecordingUI();
+    }
+
+    function cancelVoiceRecording() {
+      if (mediaRecorder && mediaRecorder.state === 'recording') {
+        audioChunks = [];
+        mediaRecorder.stop();
+      }
+      cleanupRecordingUI();
+    }
+
+    function cleanupRecordingUI() {
+      micBtn.classList.remove('recording');
+      recordingBanner.classList.remove('active');
+      if (recordingInterval) clearInterval(recordingInterval);
+      notifyFrameHeight();
+    }
+
+    // Initial sizing
+    updateSendState();
+    window.addEventListener('resize', notifyFrameHeight);
+    window.addEventListener('load', notifyFrameHeight);
+    setTimeout(notifyFrameHeight, 100);
+  </script>
+</body>
+</html>

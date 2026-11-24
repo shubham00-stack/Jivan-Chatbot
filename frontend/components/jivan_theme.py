@@ -1,47 +1,205 @@
 """
-JIVAN Enterprise Theme & CSS Stylesheet
-Supports Bright (Light) Mode and Dark Mode:
-- Left Sidebar ALWAYS visible and expanded (never collapsed off-screen)
-- Zero unrendered Material ligature words ('expand_more' suppressed globally)
-- Pure white (#FFFFFF) high-visibility chat input in Bright Mode with pitch dark text (#0F172A)
-- Clean white (#FFFFFF) pill buttons in Bright Mode with crisp dark text
-- Sticky fixed-position Right Inspector Panel (Sources & Details)
-- Full isolation between chat stream and floating composer
+JIVAN AI - Centralized Light & Dark Mode Stylesheet
+Features:
+- Centralized CSS Variables:
+  * Light Mode: #FFFFFF main, #F5F7FA secondary, #F0F3F8 cards, #202124 text, #737780 secondary text, #E1E5EB borders
+  * Dark Mode: #121212 main, #181818 secondary, #202124 cards, #F5F5F5 text, #A1A1AA secondary text, #303030 borders
+  * Accent: JIVAN Blue (#1D61D2) preserved across both themes
+  * Message Composer: #212121 charcoal preserved in both themes
+- 250ms smooth transition across background-color, color, border-color, and box-shadow
+- Theme persistence via localStorage and prefers-color-scheme detection
+- Custom styling for all app components: Top bar, Cards, Sidebar, Chat feed, Popovers, Scrollbars, Inputs
 """
 
-def get_jivan_css(theme_mode: str = "bright") -> str:
-    is_dark = (theme_mode == "dark")
-
-    # Color Palettes
-    bg_app = "#0B0F19" if is_dark else "#F8FAFC"
-    bg_card = "#111827" if is_dark else "#FFFFFF"
-    border_color = "#334155" if is_dark else "#E2E8F0"
-    text_primary = "#F8FAFC" if is_dark else "#0F172A"
-    text_secondary = "#94A3B8" if is_dark else "#64748B"
-    bg_user_bubble = "#1E3A8A" if is_dark else "#EBF3FE"
-    text_user_bubble = "#FFFFFF" if is_dark else "#0F172A"
-    bg_asst_bubble = "#1F2937" if is_dark else "#FFFFFF"
-    text_asst_bubble = "#E2E8F0" if is_dark else "#1E293B"
-    input_bg = "#1E293B" if is_dark else "#FFFFFF"
-    input_text = "#FFFFFF" if is_dark else "#0F172A"
-    input_border = "#475569" if is_dark else "#CBD5E1"
-    btn_bg = "#1E293B" if is_dark else "#FFFFFF"
-    btn_text = "#F8FAFC" if is_dark else "#1E293B"
-    btn_border = "#334155" if is_dark else "#CBD5E1"
-    btn_hover_bg = "#1E3A8A" if is_dark else "#F0FDF4"
+def get_jivan_css(theme_mode: str = "light") -> str:
+    is_dark = (str(theme_mode).lower() in ("dark", "obsidian", "night"))
+    active_theme = "dark" if is_dark else "light"
 
     return f"""
+<script>
+(function() {{
+  const THEME_KEY = 'jivan_theme';
+  
+  function getSystemTheme() {{
+    return (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+  }}
+  
+  function getEffectiveTheme() {{
+    const saved = localStorage.getItem(THEME_KEY);
+    if (saved === 'dark' || saved === 'light') return saved;
+    return getSystemTheme();
+  }}
+
+  const effectiveTheme = getEffectiveTheme();
+  
+  // Apply data-theme immediately to root and body to eliminate flash
+  document.documentElement.setAttribute('data-theme', effectiveTheme);
+  if (document.body) {{
+    document.body.setAttribute('data-theme', effectiveTheme);
+    document.body.classList.remove('theme-light', 'theme-dark');
+    document.body.classList.add('theme-' + effectiveTheme);
+  }}
+
+  // Keep query param in sync with active theme
+  const url = new URL(window.location.href);
+  const currentParam = url.searchParams.get('theme');
+  if (currentParam && currentParam !== effectiveTheme && (currentParam === 'dark' || currentParam === 'light')) {{
+    localStorage.setItem(THEME_KEY, currentParam);
+    document.documentElement.setAttribute('data-theme', currentParam);
+    if (document.body) {{
+      document.body.setAttribute('data-theme', currentParam);
+      document.body.classList.remove('theme-light', 'theme-dark');
+      document.body.classList.add('theme-' + currentParam);
+    }}
+  }} else if (!currentParam) {{
+    url.searchParams.set('theme', effectiveTheme);
+    window.history.replaceState(null, '', url.toString());
+  }}
+
+  // Listen to OS prefers-color-scheme change if user hasn't explicitly chosen
+  if (window.matchMedia) {{
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {{
+      if (!localStorage.getItem(THEME_KEY)) {{
+        const newSys = e.matches ? 'dark' : 'light';
+        document.documentElement.setAttribute('data-theme', newSys);
+        const u = new URL(window.location.href);
+        u.searchParams.set('theme', newSys);
+        window.location.href = u.toString();
+      }}
+    }});
+  }}
+}})();
+</script>
+
 <style>
 /* =========================================================================
-   1. GLOBAL RESETS & TYPOGRAPHY
+   1. CENTRALIZED THEME CSS VARIABLES
    ========================================================================= */
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
-
-html, body, p, div:not([data-testid="stIconMaterial"]):not(.material-symbols-rounded), input, textarea {{
-    font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+:root {{
+    /* Default fallback variables based on active server evaluation */
+    --bg-primary: {"#121212" if is_dark else "#FFFFFF"};
+    --bg-secondary: {"#181818" if is_dark else "#F5F7FA"};
+    --bg-card: {"#202124" if is_dark else "#F0F3F8"};
+    --bg-card-hover: {"#2A2B2E" if is_dark else "#E8EEF5"};
+    --text-primary: {"#F5F5F5" if is_dark else "#202124"};
+    --text-secondary: {"#A1A1AA" if is_dark else "#737780"};
+    --text-muted: {"#71717A" if is_dark else "#8E918F"};
+    --border-color: {"#303030" if is_dark else "#E1E5EB"};
+    --border-subtle: {"rgba(255, 255, 255, 0.08)" if is_dark else "rgba(0, 0, 0, 0.08)"};
+    --accent-color: #1D61D2;
+    --accent-hover: #1852B5;
+    --composer-bg: #212121;
+    --user-bubble-bg: {"#202124" if is_dark else "#F0F3F8"};
+    --user-bubble-text: {"#F5F5F5" if is_dark else "#202124"};
+    --scrollbar-thumb: {"#3F3F46" if is_dark else "#D1D5DB"};
+    --scrollbar-track: {"#121212" if is_dark else "#FFFFFF"};
+    --input-bg: {"#181818" if is_dark else "#FFFFFF"};
+    --input-border: {"#303030" if is_dark else "#E1E5EB"};
+    --gemini-gradient: {"linear-gradient(90deg, #8AB4F8 0%, #C58AF9 50%, #F28B82 100%)" if is_dark else "linear-gradient(74deg, #4285F4 0%, #9B72CF 35%, #D96570 70%, #1A73E8 100%)"};
+    --gemini-sparkle-gradient: {"linear-gradient(135deg, #8AB4F8 0%, #C58AF9 50%, #F28B82 100%)" if is_dark else "linear-gradient(135deg, #4285F4 0%, #9B72CF 50%, #D96570 100%)"};
+    --btn-new-chat-bg: {"#202124" if is_dark else "#E1EAF8"};
+    --btn-new-chat-text: {"#F5F5F5" if is_dark else "#041E49"};
+    --btn-new-chat-hover: {"#2C2D30" if is_dark else "#D0E0F7"};
 }}
 
-/* SUPPRESS ALL UNRENDERED LIGATURE TEXT (e.g. 'expand_more') ACROSS THE ENTIRE UI */
+/* Light Theme Variables */
+[data-theme="light"], .stApp[data-theme="light"], body.theme-light {{
+    --bg-primary: #FFFFFF;
+    --bg-secondary: #F5F7FA;
+    --bg-card: #F0F3F8;
+    --bg-card-hover: #E8EEF5;
+    --text-primary: #202124;
+    --text-secondary: #737780;
+    --text-muted: #8E918F;
+    --border-color: #E1E5EB;
+    --border-subtle: rgba(0, 0, 0, 0.08);
+    --accent-color: #1D61D2;
+    --accent-hover: #1852B5;
+    --composer-bg: #212121;
+    --user-bubble-bg: #F0F3F8;
+    --user-bubble-text: #202124;
+    --scrollbar-thumb: #D1D5DB;
+    --scrollbar-track: #FFFFFF;
+    --input-bg: #FFFFFF;
+    --input-border: #E1E5EB;
+    --gemini-gradient: linear-gradient(74deg, #4285F4 0%, #9B72CF 35%, #D96570 70%, #1A73E8 100%);
+    --gemini-sparkle-gradient: linear-gradient(135deg, #4285F4 0%, #9B72CF 50%, #D96570 100%);
+    --btn-new-chat-bg: #E1EAF8;
+    --btn-new-chat-text: #041E49;
+    --btn-new-chat-hover: #D0E0F7;
+}}
+
+/* Dark Theme Variables */
+[data-theme="dark"], .stApp[data-theme="dark"], body.theme-dark {{
+    --bg-primary: #121212;
+    --bg-secondary: #181818;
+    --bg-card: #202124;
+    --bg-card-hover: #2A2B2E;
+    --text-primary: #F5F5F5;
+    --text-secondary: #A1A1AA;
+    --text-muted: #71717A;
+    --border-color: #303030;
+    --border-subtle: rgba(255, 255, 255, 0.08);
+    --accent-color: #1D61D2;
+    --accent-hover: #1852B5;
+    --composer-bg: #212121;
+    --user-bubble-bg: #202124;
+    --user-bubble-text: #F5F5F5;
+    --scrollbar-thumb: #3F3F46;
+    --scrollbar-track: #121212;
+    --input-bg: #181818;
+    --input-border: #303030;
+    --gemini-gradient: linear-gradient(90deg, #8AB4F8 0%, #C58AF9 50%, #F28B82 100%);
+    --gemini-sparkle-gradient: linear-gradient(135deg, #8AB4F8 0%, #C58AF9 50%, #F28B82 100%);
+    --btn-new-chat-bg: #202124;
+    --btn-new-chat-text: #F5F5F5;
+    --btn-new-chat-hover: #2C2D30;
+}}
+
+/* =========================================================================
+   2. SMOOTH GLOBAL THEME TRANSITIONS (250ms)
+   ========================================================================= */
+.stApp,
+section[data-testid="stSidebar"],
+.gemini-model-badge,
+.gemini-user-bubble,
+.gemini-profile-pill,
+div[data-testid="stExpander"],
+div[data-testid="stMetricValue"],
+div[data-testid="stMetricLabel"],
+div[data-testid="stPopoverBody"],
+.st-key-btn_topbar_theme_toggle button,
+.st-key-btn_topbar_pin button,
+.st-key-btn_topbar_share button,
+.st-key-btn_topbar_inspector button,
+.st-key-btn_topbar_clear button,
+.st-key-gemini_card_code button,
+.st-key-gemini_card_slides button,
+.st-key-gemini_card_art button,
+.st-key-gemini_card_doc button,
+div[class*="st-key-jivan_conv_"] button,
+.st-key-jivan_btn_new_chat button,
+.st-key-nav_conversations button,
+.st-key-nav_knowledge button,
+.st-key-nav_tasks button,
+.st-key-nav_templates button,
+.st-key-nav_settings button {{
+    transition: background-color 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+                border-color 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+                color 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+                box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}}
+
+/* =========================================================================
+   3. GLOBAL RESETS & FONTS
+   ========================================================================= */
+@import url('https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700&family=Outfit:wght@400;500;600;700&family=Roboto:wght@300;400;500;700&family=Inter:wght@400;500;600;700&display=swap');
+
+html, body, p, div:not([data-testid="stIconMaterial"]):not(.material-symbols-rounded), input, textarea {{
+    font-family: 'Google Sans', 'Roboto', 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+}}
+
+/* Suppress unrendered icon font ligatures */
 [data-testid="stIconMaterial"],
 .material-symbols-rounded,
 div[data-testid="stPopover"] span[data-testid="stIconMaterial"],
@@ -49,21 +207,17 @@ div[data-testid="stPopover"] .material-symbols-rounded {{
     display: none !important;
     visibility: hidden !important;
     font-size: 0px !important;
-    line-height: 0 !important;
     width: 0 !important;
     height: 0 !important;
-    overflow: hidden !important;
-    text-indent: -9999px !important;
 }}
 
-/* Top Header & Toolbar Reset */
+/* Streamlit Header & Toolbar Reset */
 header[data-testid="stHeader"] {{
     background: transparent !important;
     border: none !important;
     box-shadow: none !important;
     height: 0px !important;
     min-height: 0px !important;
-    overflow: visible !important;
 }}
 
 #MainMenu, footer, [data-testid="stToolbar"], [data-testid="stDecoration"] {{
@@ -71,126 +225,152 @@ header[data-testid="stHeader"] {{
     visibility: hidden !important;
 }}
 
-/* Main App Canvas Background */
+/* App Canvas */
 .stApp {{
-    background-color: {bg_app} !important;
-    color: {text_primary} !important;
+    background-color: var(--bg-primary) !important;
+    color: var(--text-primary) !important;
 }}
 
 .block-container {{
     padding-top: 1rem !important;
-    padding-bottom: 2rem !important;
-    padding-left: 1.5rem !important;
-    padding-right: 1.5rem !important;
+    padding-bottom: 3.5rem !important;
+    padding-left: 2rem !important;
+    padding-right: 2rem !important;
     max-width: 100% !important;
 }}
 
 /* =========================================================================
-   2. LEFT SIDEBAR (DEEP NAVY #0A1128) - RESPONSIVE STYLING
+   4. SIDEBAR STYLING
    ========================================================================= */
 section[data-testid="stSidebar"] {{
-    background-color: {"#070B16" if is_dark else "#0A1128"} !important;
-    color: #FFFFFF !important;
-    border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
+    background-color: var(--bg-secondary) !important;
+    color: var(--text-primary) !important;
+    border-right: 1px solid var(--border-color) !important;
 }}
 
 section[data-testid="stSidebar"] div[data-testid="stSidebarUserContent"] {{
-    padding-top: 1rem !important;
-    padding-left: 1rem !important;
-    padding-right: 1rem !important;
-    padding-bottom: 2rem !important;
+    padding: 1.2rem 0.9rem !important;
 }}
 
-/* Collapse / Expand Control Button */
+/* Collapse Hamburger Button */
 [data-testid="collapsedControl"],
 button[data-testid="stSidebarCollapseButton"] {{
     display: flex !important;
     visibility: visible !important;
     position: fixed !important;
-    top: 12px !important;
-    left: 12px !important;
-    z-index: 9999999 !important;
-    background: #008080 !important;
-    color: #FFFFFF !important;
-    border-radius: 8px !important;
-    border: none !important;
-    padding: 6px 8px !important;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+    top: 14px !important;
+    left: 14px !important;
+    z-index: 999999 !important;
+    background: var(--bg-card) !important;
+    color: var(--text-primary) !important;
+    border-radius: 50% !important;
+    width: 40px !important;
+    height: 40px !important;
+    border: 1px solid var(--border-color) !important;
+    align-items: center !important;
+    justify-content: center !important;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08) !important;
+    transition: background 0.2s ease !important;
+}}
+
+[data-testid="collapsedControl"]:hover,
+button[data-testid="stSidebarCollapseButton"]:hover {{
+    background: var(--bg-card-hover) !important;
 }}
 
 [data-testid="collapsedControl"] svg,
 button[data-testid="stSidebarCollapseButton"] svg {{
-    fill: #FFFFFF !important;
-    stroke: #FFFFFF !important;
+    fill: var(--text-primary) !important;
+    stroke: var(--text-primary) !important;
 }}
 
 /* Brand Header */
-.jivan-brand-wrapper {{
+.gemini-brand-wrapper {{
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 6px 4px 14px 4px;
-    margin-bottom: 8px;
+    gap: 10px;
+    padding: 4px 6px 14px 6px;
+    margin-bottom: 10px;
+    border-bottom: 1px solid var(--border-subtle);
 }}
 
-.jivan-logo-badge {{
-    width: 36px;
-    height: 36px;
-    background: linear-gradient(135deg, #00A896 0%, #028090 100%);
+.gemini-sparkle-logo {{
+    width: 32px;
+    height: 32px;
     border-radius: 10px;
+    background: var(--gemini-sparkle-gradient);
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 4px 12px rgba(0, 168, 150, 0.35);
-    color: white;
-    font-size: 19px;
-}}
-
-.jivan-brand-title {{
-    font-size: 1.35rem;
-    font-weight: 700;
-    letter-spacing: 0.16em;
     color: #FFFFFF;
-    text-transform: uppercase;
+    font-size: 18px;
+    font-weight: 700;
+    box-shadow: 0 2px 10px rgba(66, 133, 244, 0.35);
 }}
 
-/* + New conversation Button */
+.gemini-brand-title {{
+    font-size: 1.35rem;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}}
+
+.gemini-brand-badge {{
+    font-size: 0.68rem;
+    font-weight: 600;
+    background: var(--gemini-sparkle-gradient);
+    color: #FFFFFF;
+    padding: 2px 7px;
+    border-radius: 12px;
+    letter-spacing: 0.02em;
+}}
+
+/* '+ New chat' Capsule Pill */
 .st-key-jivan_btn_new_chat button {{
-    background: linear-gradient(135deg, #008080 0%, #006666 100%) !important;
-    color: #FFFFFF !important;
+    background: var(--btn-new-chat-bg) !important;
+    color: var(--btn-new-chat-text) !important;
+    -webkit-text-fill-color: var(--btn-new-chat-text) !important;
     border: none !important;
-    border-radius: 9px !important;
-    font-weight: 600 !important;
+    border-radius: 28px !important;
+    font-weight: 500 !important;
     font-size: 0.94rem !important;
-    padding: 0.6rem 1rem !important;
-    box-shadow: 0 4px 14px rgba(0, 128, 128, 0.35) !important;
-    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    padding: 0.65rem 1.2rem !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08) !important;
+    transition: all 0.2s cubic-bezier(0.2, 0, 0, 1) !important;
     width: 100% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 8px !important;
 }}
 
 .st-key-jivan_btn_new_chat button:hover {{
-    background: linear-gradient(135deg, #009999 0%, #008080 100%) !important;
+    background: var(--btn-new-chat-hover) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12) !important;
     transform: translateY(-1px) !important;
-    box-shadow: 0 6px 18px rgba(0, 128, 128, 0.5) !important;
 }}
 
-/* Sidebar Nav Buttons */
+/* Navigation Links */
 .st-key-nav_conversations button,
 .st-key-nav_knowledge button,
 .st-key-nav_tasks button,
 .st-key-nav_templates button,
 .st-key-nav_settings button {{
     background: transparent !important;
-    border: 1px solid transparent !important;
-    border-radius: 8px !important;
-    color: #94A3B8 !important;
+    border: none !important;
+    border-radius: 24px !important;
+    color: var(--text-secondary) !important;
+    -webkit-text-fill-color: var(--text-secondary) !important;
     font-size: 0.92rem !important;
     font-weight: 500 !important;
     text-align: left !important;
     justify-content: flex-start !important;
-    padding: 8px 12px !important;
+    padding: 9px 14px !important;
     box-shadow: none !important;
-    transition: all 0.2s ease !important;
+    transition: all 0.15s ease !important;
 }}
 
 .st-key-nav_conversations button:hover,
@@ -198,875 +378,533 @@ button[data-testid="stSidebarCollapseButton"] svg {{
 .st-key-nav_tasks button:hover,
 .st-key-nav_templates button:hover,
 .st-key-nav_settings button:hover {{
-    background-color: rgba(255, 255, 255, 0.08) !important;
-    color: #FFFFFF !important;
+    background-color: var(--bg-card) !important;
+    color: var(--text-primary) !important;
+    -webkit-text-fill-color: var(--text-primary) !important;
 }}
 
-/* Sidebar Section Headers */
-.jivan-section-label {{
-    font-size: 0.74rem;
+.gemini-sidebar-heading {{
+    font-size: 0.76rem;
+    font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: #64748B;
-    font-weight: 700;
-    margin: 18px 0 8px 8px;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+    margin: 18px 0 8px 10px;
 }}
 
-/* ALL SIDEBAR BUTTONS - NEVER SOLID WHITE, ALWAYS CRISP & READABLE */
-section[data-testid="stSidebar"] .stButton > button,
-section[data-testid="stSidebar"] div[data-testid="stColumn"] .stButton > button,
-section[data-testid="stSidebar"] div[data-testid="stVerticalBlock"] .stButton > button {{
-    background-color: rgba(255, 255, 255, 0.08) !important;
-    background: rgba(255, 255, 255, 0.08) !important;
-    color: #F8FAFC !important;
-    -webkit-text-fill-color: #F8FAFC !important;
-    border: 1px solid rgba(255, 255, 255, 0.14) !important;
-    border-radius: 8px !important;
-    font-size: 0.88rem !important;
-    font-weight: 500 !important;
-    box-shadow: none !important;
-    transition: all 0.2s ease !important;
-}}
-
-section[data-testid="stSidebar"] .stButton > button:hover,
-section[data-testid="stSidebar"] div[data-testid="stColumn"] .stButton > button:hover {{
-    background-color: rgba(255, 255, 255, 0.16) !important;
-    background: rgba(255, 255, 255, 0.16) !important;
-    border-color: rgba(255, 255, 255, 0.28) !important;
-    color: #FFFFFF !important;
-    -webkit-text-fill-color: #FFFFFF !important;
-}}
-
-/* Appearance Theme Buttons (☀️ Bright / 🌙 Dark) */
-div[class*="st-key-btn_theme_"] button,
-.st-key-btn_theme_bright button,
-.st-key-btn_theme_dark button {{
-    background-color: rgba(255, 255, 255, 0.08) !important;
-    background: rgba(255, 255, 255, 0.08) !important;
-    color: #FFFFFF !important;
-    -webkit-text-fill-color: #FFFFFF !important;
-    border: 1px solid rgba(255, 255, 255, 0.18) !important;
-    border-radius: 8px !important;
-    font-weight: 600 !important;
-}}
-
-div[class*="st-key-btn_theme_"] button:hover,
-.st-key-btn_theme_bright button:hover,
-.st-key-btn_theme_dark button:hover {{
-    background-color: rgba(0, 128, 128, 0.35) !important;
-    background: rgba(0, 128, 128, 0.35) !important;
-    border-color: #2DD4BF !important;
-    color: #2DD4BF !important;
-    -webkit-text-fill-color: #2DD4BF !important;
-}}
-
-/* Recent Chats List: Transparent flat list items */
-div[class*="st-key-jivan_conv_"] button,
-.st-key-jivan_conv_ button {{
+/* Recent Chats Items */
+div[class*="st-key-jivan_conv_"] button {{
     background: transparent !important;
-    background-color: transparent !important;
     border: none !important;
-    color: #CBD5E1 !important;
-    -webkit-text-fill-color: #CBD5E1 !important;
+    border-radius: 20px !important;
+    color: var(--text-secondary) !important;
+    -webkit-text-fill-color: var(--text-secondary) !important;
     text-align: left !important;
     justify-content: flex-start !important;
-    padding: 6px 8px !important;
-    font-size: 0.86rem !important;
+    padding: 8px 12px !important;
+    font-size: 0.88rem !important;
+    font-weight: 400 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    transition: all 0.15s ease !important;
 }}
 
-div[class*="st-key-jivan_conv_"] button:hover,
-.st-key-jivan_conv_ button:hover {{
-    background: rgba(255, 255, 255, 0.08) !important;
-    background-color: rgba(255, 255, 255, 0.08) !important;
-    color: #FFFFFF !important;
-    -webkit-text-fill-color: #FFFFFF !important;
+div[class*="st-key-jivan_conv_"] button:hover {{
+    background: var(--bg-card) !important;
+    color: var(--text-primary) !important;
+    -webkit-text-fill-color: var(--text-primary) !important;
 }}
 
-/* Delete Conversation ✕ Buttons */
-div[class*="st-key-jivan_del_"] button,
-.st-key-jivan_del_ button {{
+div[class*="st-key-jivan_del_"] button {{
     background: transparent !important;
-    background-color: transparent !important;
     border: none !important;
-    color: #94A3B8 !important;
-    -webkit-text-fill-color: #94A3B8 !important;
-    padding: 6px 4px !important;
+    border-radius: 50% !important;
+    color: var(--text-muted) !important;
+    -webkit-text-fill-color: var(--text-muted) !important;
+    padding: 6px !important;
 }}
 
-div[class*="st-key-jivan_del_"] button:hover,
-.st-key-jivan_del_ button:hover {{
-    color: #EF4444 !important;
-    -webkit-text-fill-color: #EF4444 !important;
-    background: rgba(239, 68, 68, 0.15) !important;
-    background-color: rgba(239, 68, 68, 0.15) !important;
+div[class*="st-key-jivan_del_"] button:hover {{
+    color: #DC2626 !important;
+    -webkit-text-fill-color: #DC2626 !important;
+    background: rgba(220, 38, 38, 0.1) !important;
 }}
 
-/* Profile Edit ✏️ Button */
-div[class*="st-key-btn_toggle_email_edit"] button,
-.st-key-btn_toggle_email_edit button {{
-    background: rgba(255, 255, 255, 0.08) !important;
-    background-color: rgba(255, 255, 255, 0.08) !important;
-    border: 1px solid rgba(255, 255, 255, 0.18) !important;
-    color: #FFFFFF !important;
-    -webkit-text-fill-color: #FFFFFF !important;
-    border-radius: 8px !important;
+/* Theme Toggle Segmented Control in Sidebar */
+.st-key-btn_theme_bright button,
+.st-key-btn_theme_dark button {{
+    background: var(--bg-card) !important;
+    color: var(--text-primary) !important;
+    -webkit-text-fill-color: var(--text-primary) !important;
+    border: 1px solid var(--border-color) !important;
+    border-radius: 20px !important;
+    font-size: 0.84rem !important;
+    font-weight: 500 !important;
 }}
 
-div[class*="st-key-btn_toggle_email_edit"] button:hover,
-.st-key-btn_toggle_email_edit button:hover {{
-    background: rgba(0, 128, 128, 0.35) !important;
-    background-color: rgba(0, 128, 128, 0.35) !important;
-    border-color: #2DD4BF !important;
+.st-key-btn_theme_bright button:hover,
+.st-key-btn_theme_dark button:hover {{
+    background: var(--bg-card-hover) !important;
+    border-color: var(--accent-color) !important;
 }}
 
-/* Sidebar Profile Card */
-.jivan-profile-card {{
-    background-color: rgba(255, 255, 255, 0.06);
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: 12px;
-    padding: 10px 12px;
+/* User Profile Pill */
+.gemini-profile-pill {{
     display: flex;
     align-items: center;
     gap: 10px;
-    cursor: pointer;
+    padding: 8px 12px;
+    border-radius: 24px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    margin-top: 10px;
     transition: all 0.2s ease;
 }}
 
-.jivan-profile-avatar {{
-    width: 36px;
-    height: 36px;
+.gemini-profile-pill:hover {{
+    background: var(--bg-card-hover);
+}}
+
+.gemini-avatar-circle {{
+    width: 32px;
+    height: 32px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #008080 0%, #005F5F 100%);
+    background: var(--gemini-sparkle-gradient);
     color: #FFFFFF;
-    font-weight: 700;
-    font-size: 0.86rem;
+    font-weight: 600;
+    font-size: 0.82rem;
     display: flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
 }}
 
-.jivan-profile-info {{
-    flex: 1;
-    overflow: hidden;
-}}
-
-.jivan-profile-name {{
-    color: #FFFFFF;
-    font-size: 0.84rem;
-    font-weight: 600;
-    line-height: 1.2;
+.gemini-profile-email {{
+    font-size: 0.82rem;
+    font-weight: 500;
+    color: var(--text-primary);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }}
 
-.jivan-profile-role {{
-    color: #2DD4BF;
-    font-size: 0.72rem;
-    line-height: 1.2;
-    margin-top: 2px;
+.gemini-profile-status {{
+    font-size: 0.70rem;
+    color: var(--text-muted);
 }}
 
 /* =========================================================================
-   3. MAIN CANVAS BUTTONS - PURE BRIGHT WHITE IN BRIGHT MODE
+   5. TOP NAVIGATION BAR & THEME TOGGLE BUTTON
    ========================================================================= */
-div[data-testid="stMainBlockContainer"] .stButton > button {{
-    background-color: {btn_bg} !important;
-    background: {btn_bg} !important;
-    color: {btn_text} !important;
-    -webkit-text-fill-color: {btn_text} !important;
-    border: 1.5px solid {btn_border} !important;
-    border-radius: 20px !important;
-    padding: 7px 16px !important;
-    font-size: 0.88rem !important;
-    font-weight: 500 !important;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04) !important;
-    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
-}}
-
-div[data-testid="stMainBlockContainer"] .stButton > button:hover {{
-    background-color: {btn_hover_bg} !important;
-    background: {btn_hover_bg} !important;
-    border-color: #008080 !important;
-    color: #008080 !important;
-    -webkit-text-fill-color: #008080 !important;
-    transform: translateY(-1px) !important;
-    box-shadow: 0 4px 12px rgba(0, 128, 128, 0.12) !important;
-}}
-
-/* Primary Buttons */
-div[data-testid="stMainBlockContainer"] .stButton > button[data-testid="baseButton-primary"] {{
-    background: linear-gradient(135deg, #008080 0%, #006666 100%) !important;
-    color: #FFFFFF !important;
-    -webkit-text-fill-color: #FFFFFF !important;
-    border: none !important;
-}}
-
-div[data-testid="stMainBlockContainer"] .stButton > button[data-testid="baseButton-primary"]:hover {{
-    background: linear-gradient(135deg, #009999 0%, #008080 100%) !important;
-    color: #FFFFFF !important;
-    -webkit-text-fill-color: #FFFFFF !important;
-}}
-
-/* =========================================================================
-   4. CENTER CANVAS HEADER, HERO STATE & MESSAGES
-   ========================================================================= */
-.jivan-topbar {{
+.gemini-top-header {{
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 12px 18px;
-    border-bottom: 1px solid {border_color};
-    background-color: {bg_card};
-    border-radius: 14px 14px 0 0;
-    margin-bottom: 12px;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border-subtle);
+    margin-bottom: 18px;
 }}
 
-.jivan-topbar-title {{
-    font-size: 1.15rem;
-    font-weight: 700;
-    color: {text_primary};
-    display: flex;
+.gemini-model-badge {{
+    display: inline-flex;
     align-items: center;
     gap: 8px;
+    padding: 6px 14px;
+    border-radius: 20px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    font-size: 0.95rem;
+    font-weight: 500;
+    cursor: default;
 }}
 
-.jivan-topbar-subtitle {{
-    font-size: 0.8rem;
-    color: {text_secondary};
-    margin-top: 2px;
+.gemini-model-sparkle {{
+    font-size: 1.05rem;
+    background: var(--gemini-sparkle-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
 }}
 
-/* Hero Empty State */
-.jivan-hero-section {{
-    text-align: center;
-    padding: 28px 20px 14px 20px;
-    animation: fadeIn 0.4s ease-out;
+/* Top-Right Action Buttons */
+.st-key-btn_topbar_pin button,
+.st-key-btn_topbar_share button,
+.st-key-btn_topbar_inspector button,
+.st-key-btn_topbar_clear button,
+.st-key-btn_topbar_theme_toggle button {{
+    background: var(--bg-card) !important;
+    border: 1px solid var(--border-color) !important;
+    border-radius: 20px !important;
+    color: var(--text-secondary) !important;
+    -webkit-text-fill-color: var(--text-secondary) !important;
+    font-size: 0.84rem !important;
+    font-weight: 500 !important;
+    padding: 6px 12px !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+    transition: all 0.2s cubic-bezier(0.2, 0, 0, 1) !important;
 }}
 
-.jivan-hero-bubble {{
-    width: 58px;
-    height: 58px;
-    background: {"#0D3B37" if is_dark else "#E6F4F1"};
-    border-radius: 50%;
-    margin: 0 auto 14px auto;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 24px;
-    color: #008080;
+.st-key-btn_topbar_pin button:hover,
+.st-key-btn_topbar_share button:hover,
+.st-key-btn_topbar_inspector button:hover,
+.st-key-btn_topbar_clear button:hover,
+.st-key-btn_topbar_theme_toggle button:hover {{
+    background: var(--bg-card-hover) !important;
+    color: var(--text-primary) !important;
+    -webkit-text-fill-color: var(--text-primary) !important;
+    border-color: var(--accent-color) !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.10) !important;
 }}
 
-.jivan-hero-heading {{
-    font-size: 1.85rem;
-    font-weight: 700;
-    color: {text_primary};
+/* Special Theme Toggle Styling */
+.st-key-btn_topbar_theme_toggle button {{
+    font-weight: 600 !important;
+    border-color: var(--accent-color) !important;
+}}
+
+/* =========================================================================
+   6. HERO WELCOME SCREEN & SUGGESTION CARDS
+   ========================================================================= */
+.gemini-hero-container {{
+    text-align: left;
+    max-width: 860px;
+    margin: 40px auto 30px auto;
+    padding: 0 16px;
+}}
+
+.gemini-hero-greeting {{
+    font-size: 3.2rem;
+    font-weight: 500;
+    line-height: 1.18;
+    letter-spacing: -0.02em;
     margin-bottom: 6px;
-    letter-spacing: -0.01em;
 }}
 
-.jivan-hero-subheading {{
-    font-size: 0.94rem;
-    color: {text_secondary};
-    max-width: 500px;
-    margin: 0 auto 20px auto;
-    line-height: 1.5;
+.gemini-gradient-text {{
+    background: var(--gemini-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    display: inline-block;
 }}
 
-/* Date divider */
-.jivan-date-divider {{
-    text-align: center;
-    position: relative;
-    margin: 20px 0 16px 0;
+.gemini-hero-subgreeting {{
+    font-size: 3.2rem;
+    font-weight: 500;
+    line-height: 1.18;
+    letter-spacing: -0.02em;
+    color: var(--text-muted);
+    margin-bottom: 34px;
 }}
 
-.jivan-date-divider::before {{
-    content: '';
-    position: absolute;
-    left: 8%;
-    right: 8%;
-    top: 50%;
-    height: 1px;
-    background-color: {border_color};
-    z-index: 1;
+/* 4 Suggestion Cards */
+.gemini-cards-grid {{
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+    margin-top: 24px;
+    max-width: 860px;
+    margin-left: auto;
+    margin-right: auto;
 }}
 
-.jivan-date-pill {{
-    position: relative;
-    z-index: 2;
-    background-color: {bg_app};
-    padding: 2px 14px;
-    color: {text_secondary};
-    font-size: 0.78rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
+.st-key-gemini_card_code button,
+.st-key-gemini_card_slides button,
+.st-key-gemini_card_art button,
+.st-key-gemini_card_doc button {{
+    background-color: var(--bg-card) !important;
+    background: var(--bg-card) !important;
+    border: 1px solid var(--border-color) !important;
+    border-radius: 16px !important;
+    padding: 16px 14px !important;
+    min-height: 120px !important;
+    text-align: left !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+    color: var(--text-primary) !important;
+    -webkit-text-fill-color: var(--text-primary) !important;
+    font-size: 0.88rem !important;
+    font-weight: 500 !important;
+    line-height: 1.4 !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+    transition: all 0.2s cubic-bezier(0.2, 0, 0, 1) !important;
+    width: 100% !important;
 }}
 
-/* User Message */
-.jivan-user-row {{
+.st-key-gemini_card_code button:hover,
+.st-key-gemini_card_slides button:hover,
+.st-key-gemini_card_art button:hover,
+.st-key-gemini_card_doc button:hover {{
+    background: var(--bg-card-hover) !important;
+    border-color: var(--accent-color) !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08) !important;
+}}
+
+/* =========================================================================
+   7. CHAT MESSAGES STREAM
+   ========================================================================= */
+.gemini-chat-container {{
+    max-width: 860px;
+    margin: 0 auto;
+}}
+
+.gemini-user-row {{
     display: flex;
     justify-content: flex-end;
     align-items: flex-end;
     gap: 12px;
-    margin-bottom: 16px;
-    animation: slideUpFadeIn 0.3s ease-out;
+    margin-bottom: 22px;
+    margin-top: 10px;
 }}
 
-.jivan-user-bubble {{
-    background-color: {bg_user_bubble};
-    color: {text_user_bubble};
-    border-radius: 18px 18px 4px 18px;
-    padding: 12px 18px;
-    max-width: 72%;
-    font-size: 0.94rem;
+.gemini-user-bubble {{
+    background-color: var(--user-bubble-bg);
+    color: var(--user-bubble-text);
+    border: 1px solid var(--border-color);
+    border-radius: 24px 24px 6px 24px;
+    padding: 14px 20px;
+    max-width: 80%;
+    font-size: 0.98rem;
     line-height: 1.55;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.04);
 }}
 
-.jivan-user-time {{
-    font-size: 0.72rem;
-    color: {"#93C5FD" if is_dark else "#94A3B8"};
-    margin-top: 5px;
-    text-align: right;
-}}
-
-.jivan-user-avatar {{
-    width: 34px;
-    height: 34px;
+.gemini-user-avatar {{
+    width: 32px;
+    height: 32px;
     border-radius: 50%;
-    background-color: #008080;
-    color: white;
-    font-size: 0.8rem;
-    font-weight: 700;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-}}
-
-/* Assistant Message */
-.jivan-ai-avatar {{
-    width: 34px;
-    height: 34px;
-    border-radius: 50%;
-    background-color: #0A1128;
+    background: var(--accent-color);
     color: #FFFFFF;
-    font-size: 0.92rem;
+    font-size: 0.8rem;
+    font-weight: 600;
     display: flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
 }}
 
-/* =========================================================================
-   5. ASK A QUESTION COMPOSER BOX - 100% PURE BRIGHT WHITE IN BRIGHT MODE
-   ========================================================================= */
-div[data-testid="stChatInput"],
-div[data-testid="stChatInput"] > div,
-div[data-testid="stChatInput"] textarea,
-div[data-testid="stChatInput"] [data-baseweb="textarea"],
-div[data-testid="stChatInput"] [data-baseweb="base-input"] {{
-    background-color: {input_bg} !important;
-    background: {input_bg} !important;
-    color: {input_text} !important;
-    -webkit-text-fill-color: {input_text} !important;
-}}
-
-div[data-testid="stChatInput"] {{
-    border: 1.5px solid {input_border} !important;
-    border-radius: 14px !important;
-    box-shadow: 0 2px 14px rgba(0, 0, 0, 0.06) !important;
-    padding: 6px 10px !important;
-    margin-top: 8px !important;
-    transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
-}}
-
-div[data-testid="stChatInput"]:focus-within {{
-    border-color: #008080 !important;
-    box-shadow: 0 4px 20px rgba(0, 128, 128, 0.2) !important;
-}}
-
-div[data-testid="stChatInput"] textarea {{
-    font-family: inherit !important;
-    font-size: 0.98rem !important;
-    font-weight: 500 !important;
-    line-height: 1.45 !important;
-    caret-color: #008080 !important;
-    border: none !important;
-    box-shadow: none !important;
-    user-select: text !important;
-    -webkit-user-select: text !important;
-}}
-
-div[data-testid="stChatInput"] textarea::placeholder {{
-    color: {text_secondary} !important;
-    -webkit-text-fill-color: {text_secondary} !important;
-    opacity: 1 !important;
-}}
-
-div[data-testid="stChatInput"] button {{
-    background-color: #008080 !important;
-    color: #FFFFFF !important;
-    border-radius: 8px !important;
-    border: none !important;
-    transition: background 0.2s ease !important;
-}}
-
-div[data-testid="stChatInput"] button:hover {{
-    background-color: #006666 !important;
-}}
-
-/* =========================================================================
-   6. RIGHT PANEL (SOURCES & DETAILS)
-   ========================================================================= */
-
-.st-key-tab_sources button,
-.st-key-tab_details button {{
-    background: transparent !important;
-    border: none !important;
-    border-radius: 0px !important;
-    box-shadow: none !important;
-    border-bottom: 2px solid transparent !important;
-    font-weight: 600 !important;
-    font-size: 0.94rem !important;
-    color: {text_secondary} !important;
-    padding-bottom: 8px !important;
-    transition: all 0.2s ease !important;
-}}
-
-.st-key-tab_sources button:hover,
-.st-key-tab_details button:hover {{
-    color: #008080 !important;
-}}
-
-/* Document cards */
-.jivan-source-card {{
-    background-color: {bg_card};
-    border: 1px solid {border_color};
-    border-radius: 10px;
-    padding: 12px 14px;
-    margin-bottom: 10px;
+.gemini-asst-row {{
     display: flex;
-    align-items: center;
-    gap: 12px;
-    transition: all 0.2s ease;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.02);
+    gap: 14px;
+    margin-bottom: 24px;
+    align-items: flex-start;
 }}
 
-.jivan-source-card:hover {{
-    border-color: #008080;
-    transform: translateX(2px);
-}}
-
-.jivan-doc-badge {{
-    width: 36px;
-    height: 36px;
-    border-radius: 8px;
+.gemini-asst-sparkle {{
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: var(--gemini-sparkle-gradient);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.1rem;
+    color: #FFFFFF;
+    font-size: 15px;
     flex-shrink: 0;
+    margin-top: 2px;
+    box-shadow: 0 2px 8px rgba(66, 133, 244, 0.3);
 }}
 
-.jivan-badge-pdf {{
-    background-color: #FEE2E2;
-    color: #DC2626;
-}}
-
-.jivan-badge-xlsx {{
-    background-color: #DCFCE7;
-    color: #16A34A;
-}}
-
-.jivan-badge-docx {{
-    background-color: #E0E7FF;
-    color: #4F46E5;
-}}
-
-.jivan-source-meta {{
+.gemini-asst-content {{
     flex: 1;
     overflow: hidden;
+    font-size: 1rem;
+    line-height: 1.65;
+    color: var(--text-primary);
 }}
 
-.jivan-source-title {{
-    font-size: 0.88rem;
-    font-weight: 600;
-    color: {text_primary};
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}}
-
-.jivan-source-subtitle {{
-    font-size: 0.74rem;
-    color: {text_secondary};
-    margin-top: 2px;
-}}
-
-.jivan-citation-count {{
-    background-color: {border_color};
-    color: {text_secondary};
-    font-size: 0.72rem;
-    font-weight: 600;
-    width: 22px;
-    height: 22px;
-    border-radius: 50%;
-    display: flex;
+.gemini-specialist-tag {{
+    display: inline-flex;
     align-items: center;
-    justify-content: center;
-}}
-
-/* Details Section */
-.jivan-details-group {{
-    margin-top: 20px;
-    border-top: 1px solid {border_color};
-    padding-top: 16px;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}}
-
-.jivan-detail-row {{
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-}}
-
-.jivan-detail-label {{
-    font-size: 0.75rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: {text_secondary};
+    gap: 5px;
+    font-size: 0.76rem;
     font-weight: 600;
+    color: var(--accent-color);
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    padding: 3px 9px;
+    border-radius: 12px;
+    margin-bottom: 8px;
 }}
 
-.jivan-detail-val {{
-    font-size: 0.88rem;
-    color: {text_primary};
-    font-weight: 500;
+/* Message Action Buttons */
+.st-key-btn_copy_msg button,
+.st-key-btn_like_msg button,
+.st-key-btn_dislike_msg button,
+div[class*="st-key-copy_"] button,
+div[class*="st-key-like_"] button,
+div[class*="st-key-dislike_"] button {{
+    background: transparent !important;
+    border: none !important;
+    color: var(--text-muted) !important;
+    -webkit-text-fill-color: var(--text-muted) !important;
+    border-radius: 50% !important;
+    width: 34px !important;
+    height: 34px !important;
+    padding: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 0.92rem !important;
+    transition: all 0.15s ease !important;
+}}
+
+div[class*="st-key-copy_"] button:hover,
+div[class*="st-key-like_"] button:hover,
+div[class*="st-key-dislike_"] button:hover {{
+    background: var(--bg-card) !important;
+    color: var(--accent-color) !important;
+    -webkit-text-fill-color: var(--accent-color) !important;
+}}
+
+.gemini-grounding-chip {{
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    padding: 4px 12px;
+    font-size: 0.80rem;
+    color: var(--text-secondary);
+    margin: 4px 6px 4px 0;
 }}
 
 /* =========================================================================
-   7. KEYFRAME ANIMATIONS
+   8. COMPOSER IFRAME INTEGRATION (Preserved #212121 Charcoal Dock)
    ========================================================================= */
-@keyframes fadeIn {{
-    from {{
-        opacity: 0;
-        transform: translateY(6px);
-    }}
-    to {{
-        opacity: 1;
-        transform: translateY(0);
-    }}
+.gemini-composer-wrapper {{
+    max-width: 860px;
+    margin: 0 auto;
+    position: relative;
+    padding: 0 4px;
 }}
 
-@keyframes slideUpFadeIn {{
-    from {{
-        opacity: 0;
-        transform: translateY(10px);
-    }}
-    to {{
-        opacity: 1;
-        transform: translateY(0);
-    }}
+iframe[title*="jivan_chatgpt_composer"],
+iframe[src*="jivan_chatgpt_composer"],
+div[data-testid="stCustomComponentV1"] {{
+    width: 100% !important;
+    max-width: 860px !important;
+    margin: 0 auto !important;
+    border: none !important;
+    display: block !important;
+}}
+
+/* Popover surfaces in theme */
+div[data-testid="stPopoverBody"] {{
+    background-color: var(--bg-card) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid var(--border-color) !important;
+    border-radius: 16px !important;
+    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.25) !important;
+    padding: 14px 16px !important;
+}}
+
+/* Thinking Box */
+.jivan-thinking-box {{
+    background: rgba(29, 97, 210, 0.08);
+    border-left: 3px solid var(--accent-color);
+    border-radius: 8px;
+    padding: 8px 14px;
+    margin-bottom: 12px;
+    font-size: 0.86rem;
+    color: var(--accent-color);
+}}
+
+/* Disclaimer */
+.gemini-disclaimer {{
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    text-align: center;
+    margin-top: 10px;
+    letter-spacing: 0.01em;
 }}
 
 /* =========================================================================
-   8. RESPONSIVE DESIGN FOR ALL DEVICE TYPES (DESKTOP, TABLET, MOBILE, IPHONE)
+   9. STREAMLIT EXPANDERS, METRICS, AND INPUTS
    ========================================================================= */
-
-/* -------------------------------------------------------------------------
-   A. DESKTOP & LAPTOP SCREENS (min-width: 993px)
-   ------------------------------------------------------------------------- */
-@media (min-width: 993px) {{
-    /* Left sidebar pinned permanently */
-    section[data-testid="stSidebar"],
-    section[data-testid="stSidebar"][aria-expanded="true"],
-    section[data-testid="stSidebar"][aria-expanded="false"] {{
-        width: 280px !important;
-        min-width: 280px !important;
-        max-width: 280px !important;
-        transform: none !important;
-        margin-left: 0px !important;
-        left: 0px !important;
-        display: block !important;
-        visibility: visible !important;
-        position: relative !important;
-        opacity: 1 !important;
-        z-index: 100 !important;
-    }}
-
-    /* Fixed sticky right context inspector */
-    div[data-testid="column"]:nth-of-type(2) {{
-        position: sticky !important;
-        top: 1rem !important;
-        max-height: calc(100vh - 2rem) !important;
-        overflow-y: auto !important;
-    }}
-
-    /* Hide redundant hamburger on desktop */
-    [data-testid="collapsedControl"] {{
-        display: none !important;
-    }}
+div[data-testid="stExpander"] {{
+    background-color: var(--bg-card) !important;
+    border: 1px solid var(--border-color) !important;
+    border-radius: 14px !important;
+    color: var(--text-primary) !important;
 }}
 
-/* -------------------------------------------------------------------------
-   B. TABLET & IPAD SCREENS (769px to 992px)
-   ------------------------------------------------------------------------- */
+div[data-testid="stExpander"] summary {{
+    color: var(--text-primary) !important;
+}}
+
+div[data-testid="stMetricValue"] {{
+    color: var(--text-primary) !important;
+}}
+
+div[data-testid="stMetricLabel"] {{
+    color: var(--text-secondary) !important;
+}}
+
+input, textarea, div[data-baseweb="select"] > div {{
+    background-color: var(--input-bg) !important;
+    color: var(--text-primary) !important;
+    -webkit-text-fill-color: var(--text-primary) !important;
+    border-color: var(--input-border) !important;
+}}
+
+hr {{
+    border-color: var(--border-color) !important;
+}}
+
+/* =========================================================================
+   10. SCROLLBARS
+   ========================================================================= */
+::-webkit-scrollbar {{
+    width: 8px;
+    height: 8px;
+}}
+
+::-webkit-scrollbar-track {{
+    background: var(--scrollbar-track) !important;
+}}
+
+::-webkit-scrollbar-thumb {{
+    background: var(--scrollbar-thumb) !important;
+    border-radius: 4px;
+}}
+
+::-webkit-scrollbar-thumb:hover {{
+    background: var(--text-muted) !important;
+}}
+
+/* =========================================================================
+   11. RESPONSIVE MEDIA QUERIES
+   ========================================================================= */
 @media (max-width: 992px) {{
-    /* Collapsed off-canvas sidebar */
-    section[data-testid="stSidebar"][aria-expanded="false"] {{
-        transform: translateX(-105%) !important;
-        width: 0px !important;
-        min-width: 0px !important;
-        max-width: 0px !important;
-        opacity: 0 !important;
-        visibility: hidden !important;
-        pointer-events: none !important;
-        position: fixed !important;
-        left: -320px !important;
-        transition: transform 0.3s ease, opacity 0.2s ease !important;
+    .gemini-cards-grid {{
+        grid-template-columns: repeat(2, 1fr) !important;
     }}
-
-    /* Smooth off-canvas drawer when opened */
-    section[data-testid="stSidebar"][aria-expanded="true"] {{
-        position: fixed !important;
-        top: 0 !important;
-        left: 0 !important;
-        bottom: 0 !important;
-        height: 100vh !important;
-        width: 85vw !important;
-        max-width: 320px !important;
-        min-width: 260px !important;
-        transform: translateX(0) !important;
-        visibility: visible !important;
-        opacity: 1 !important;
-        z-index: 999999 !important;
-        background-color: {"#070B16" if is_dark else "#0A1128"} !important;
-        box-shadow: 6px 0 32px rgba(0, 0, 0, 0.5) !important;
-        transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
-    }}
-
-    /* Touch-friendly Hamburger button */
-    [data-testid="collapsedControl"] {{
-        display: flex !important;
-        visibility: visible !important;
-        position: fixed !important;
-        top: 12px !important;
-        left: 12px !important;
-        z-index: 99999 !important;
-        background: #008080 !important;
-        color: #FFFFFF !important;
-        width: 44px !important;
-        height: 44px !important;
-        border-radius: 10px !important;
-        align-items: center !important;
-        justify-content: center !important;
-        box-shadow: 0 4px 14px rgba(0, 128, 128, 0.4) !important;
-        border: none !important;
-        cursor: pointer !important;
-    }}
-
-    button[data-testid="stSidebarCollapseButton"] {{
-        display: flex !important;
-        visibility: visible !important;
-        position: absolute !important;
-        top: 12px !important;
-        right: 12px !important;
-        z-index: 9999999 !important;
-        background: rgba(255, 255, 255, 0.12) !important;
-        color: #FFFFFF !important;
-        border-radius: 8px !important;
-        width: 36px !important;
-        height: 36px !important;
-        align-items: center !important;
-        justify-content: center !important;
-        border: none !important;
-    }}
-
-    /* 2-Column Vertical Stacking: Canvas 100% width, Inspector cleanly beneath */
-    div[data-testid="stHorizontalBlock"]:has(> div[data-testid="column"]:nth-of-type(2)) {{
-        flex-direction: column !important;
-        gap: 1.5rem !important;
-    }}
-
-    div[data-testid="stHorizontalBlock"]:has(> div[data-testid="column"]:nth-of-type(2)) > div[data-testid="column"] {{
-        width: 100% !important;
-        min-width: 100% !important;
-        max-width: 100% !important;
-        flex: 1 1 100% !important;
-    }}
-
-    div[data-testid="column"]:nth-of-type(2) {{
-        position: static !important;
-        max-height: none !important;
-        overflow-y: visible !important;
-        margin-top: 1.5rem !important;
-        border-top: 1px solid {"#243048" if is_dark else "#E2E8F0"} !important;
-        padding-top: 1.5rem !important;
+    .gemini-hero-greeting,
+    .gemini-hero-subgreeting {{
+        font-size: 2.4rem !important;
     }}
 }}
 
-/* -------------------------------------------------------------------------
-   C. MOBILE PHONES (<= 768px): IPHONE SAFARI, ANDROID CHROME, PIXEL, GALAXY
-   ------------------------------------------------------------------------- */
 @media (max-width: 768px) {{
-    /* Main Content Edge Padding: maximize space on small screens */
     .block-container {{
-        padding-top: 4rem !important;
-        padding-bottom: 2rem !important;
-        padding-left: 0.75rem !important;
-        padding-right: 0.75rem !important;
-        max-width: 100% !important;
+        padding-left: 1rem !important;
+        padding-right: 1rem !important;
+        padding-top: 3.5rem !important;
     }}
-
-    /* Top bar title and action buttons */
-    .jivan-topbar-title {{
-        font-size: 1.15rem !important;
+    .gemini-cards-grid {{
+        grid-template-columns: 1fr !important;
     }}
-    .jivan-topbar-subtitle {{
-        font-size: 0.75rem !important;
+    .gemini-hero-greeting,
+    .gemini-hero-subgreeting {{
+        font-size: 1.85rem !important;
     }}
-    .st-key-btn_topbar_pin button,
-    .st-key-btn_topbar_share button,
-    .st-key-btn_topbar_clear button {{
-        font-size: 0.78rem !important;
-        padding: 6px 4px !important;
-        min-height: 38px !important;
-        border-radius: 8px !important;
-    }}
-
-    /* Hero section typography */
-    .jivan-hero-heading {{
-        font-size: 1.5rem !important;
-    }}
-    .jivan-hero-subheading {{
-        font-size: 0.88rem !important;
-        max-width: 100% !important;
-        line-height: 1.45 !important;
-    }}
-    .jivan-hero-bubble {{
-        width: 48px !important;
-        height: 48px !important;
-        font-size: 24px !important;
-        border-radius: 12px !important;
-    }}
-
-    /* Hero suggestions stack full-width for easy thumb tapping */
-    .st-key-pill_code,
-    .st-key-pill_slides,
-    .st-key-pill_art {{
-        width: 100% !important;
-        margin-bottom: 6px !important;
-    }}
-    .st-key-pill_code button,
-    .st-key-pill_slides button,
-    .st-key-pill_art button {{
-        width: 100% !important;
-        font-size: 0.88rem !important;
-        padding: 10px 14px !important;
-        min-height: 44px !important;
-        border-radius: 10px !important;
-    }}
-
-    /* Chat Messages feed */
-    .jivan-user-bubble {{
-        max-width: 88% !important;
-        font-size: 0.92rem !important;
-        padding: 10px 14px !important;
-        border-radius: 16px 16px 4px 16px !important;
-    }}
-    .jivan-ai-card {{
-        padding: 12px 14px !important;
-        font-size: 0.92rem !important;
-        border-radius: 12px !important;
-    }}
-    .jivan-user-avatar,
-    .jivan-ai-avatar {{
-        width: 30px !important;
-        height: 30px !important;
-        font-size: 0.75rem !important;
-    }}
-    .jivan-message-row {{
-        gap: 8px !important;
-        margin-bottom: 14px !important;
-    }}
-
-    /* Floating Composer Toolbar Action Buttons: 40px+ touch targets */
-    .st-key-btn_toggle_attach button,
-    .st-key-btn_toggle_voice button,
-    .st-key-btn_quick_image button,
-    .st-key-btn_quick_slides button,
-    .st-key-btn_quick_code button {{
-        font-size: 0.80rem !important;
-        padding: 7px 4px !important;
-        min-height: 40px !important;
-        border-radius: 8px !important;
-    }}
-
-    /* CRITICAL iOS SAFARI ZOOM PREVENTION: inputs must be >= 16px */
-    div[data-testid="stChatInput"] textarea,
-    input[type="text"],
-    input[type="password"],
-    input[type="email"],
-    textarea,
-    select {{
-        font-size: 16px !important;
-    }}
-
-    /* Chat Input styling on mobile */
-    div[data-testid="stChatInput"] {{
-        padding: 4px 8px !important;
-        border-radius: 12px !important;
-        margin-top: 6px !important;
-    }}
-    div[data-testid="stChatInput"] button {{
-        min-width: 38px !important;
-        min-height: 38px !important;
-    }}
-
-    /* Source & Document cards on mobile */
-    .jivan-source-card {{
-        padding: 10px 12px !important;
-        gap: 10px !important;
-    }}
-    .jivan-doc-badge {{
-        width: 32px !important;
-        height: 32px !important;
-        font-size: 1rem !important;
-    }}
-
-    /* Touch target guarantee for all buttons */
-    button {{
-        min-height: 40px !important;
-    }}
-}}
-
-/* -------------------------------------------------------------------------
-   D. SMALL MOBILE SCREENS (<= 480px): IPHONE SE, COMPACT ANDROID
-   ------------------------------------------------------------------------- */
-@media (max-width: 480px) {{
-    .block-container {{
-        padding-left: 0.5rem !important;
-        padding-right: 0.5rem !important;
-        padding-top: 3.8rem !important;
-    }}
-    .jivan-user-bubble {{
-        max-width: 92% !important;
-    }}
-    .jivan-user-bubble-meta,
-    .jivan-ai-card-meta {{
-        font-size: 0.68rem !important;
-    }}
-    .jivan-source-title {{
-        font-size: 0.84rem !important;
-    }}
-    .jivan-topbar-title {{
-        font-size: 1.05rem !important;
+    .gemini-user-bubble {{
+        max-width: 90% !important;
     }}
 }}
 </style>

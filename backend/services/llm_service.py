@@ -326,20 +326,30 @@ class LLMService:
         Processes image content and user question using a vision-capable model.
         """
         if self.gemini_client:
-            try:
-                contents = [image, prompt]
-                if system_prompt:
-                    contents.insert(0, system_prompt)
-                response = self.gemini_client.models.generate_content(
-                    model=settings.GEMINI_MODEL,
-                    contents=contents
-                )
-                return {
-                    "text": response.text or "Image analyzed successfully.",
-                    "model": settings.GEMINI_MODEL
-                }
-            except Exception as e:
-                logger.error(f"Gemini vision error: {e}")
+            models_to_try = [settings.GEMINI_MODEL, "gemini-2.0-flash", "gemini-1.5-flash"]
+            # Deduplicate while preserving order
+            seen_models = set()
+            candidate_models = []
+            for m in models_to_try:
+                if m and m not in seen_models:
+                    seen_models.add(m)
+                    candidate_models.append(m)
+
+            for model_name in candidate_models:
+                try:
+                    contents = [image, prompt]
+                    if system_prompt:
+                        contents.insert(0, system_prompt)
+                    response = self.gemini_client.models.generate_content(
+                        model=model_name,
+                        contents=contents
+                    )
+                    return {
+                        "text": response.text or "Image analyzed successfully.",
+                        "model": model_name
+                    }
+                except Exception as e:
+                    logger.warning(f"Gemini vision error with {model_name}: {e}")
 
         # Local Image Understanding Fallback
         w, h = image.size

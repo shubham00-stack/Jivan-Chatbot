@@ -1,11 +1,10 @@
 """
-JIVAN Right Panel (Sources & Details Drawer)
+JIVAN Right Panel (Sources & Details Drawer) - Google Gemini Edition
 Features:
-- Single clean unified container (no empty orphaned box at top)
+- Gemini Grounding Inspector & Metadata Details
 - Tabbed selector: 'Sources' and 'Details'
-- Sources List: Document cards with file type badges (PDF, XLSX, DOCX) and citation counts
-- Action link: 'View all sources →'
-- Details List: Owner, Created timestamp, Model (QWEN-3.8-27B Groq), Visibility (Private)
+- Indexed document cards with chunk counters and delete actions
+- Conversation metadata (Owner, Model, Security, Visibility)
 """
 
 import streamlit as st
@@ -14,7 +13,15 @@ from frontend.utils.api_client import api_client
 
 def render_jivan_inspector():
     with st.container(border=True):
-        # 1. Tab Selector (Sources vs Details)
+        st.markdown(
+            """
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+                <span style="font-weight: 600; font-size: 1rem;">📑 Grounding & Details</span>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
         col_tab1, col_tab2 = st.columns(2)
         current_tab = st.session_state.get("inspector_active_tab", "Sources")
 
@@ -31,66 +38,42 @@ def render_jivan_inspector():
         current_tab = st.session_state.get("inspector_active_tab", "Sources")
 
         if current_tab == "Sources":
-            # Fetch active indexed documents or display grounded sources
             docs = api_client.list_documents()
 
             if docs:
-                for d in docs[:5]:
+                for d in docs[:6]:
                     name = d.get("document_name", "Document")
                     ext = name.rsplit(".", 1)[-1].lower() if "." in name else "pdf"
-                    badge_class = "jivan-badge-pdf" if ext == "pdf" else "jivan-badge-docx"
-                    icon = "📄" if ext == "pdf" else "📝"
                     chunks = d.get("chunk_count", 1)
 
                     st.markdown(
                         f"""
-                        <div class="jivan-source-card">
-                            <div class="jivan-doc-badge {badge_class}">{icon}</div>
-                            <div class="jivan-source-meta">
-                                <div class="jivan-source-title">{name}</div>
-                                <div class="jivan-source-subtitle">{ext.upper()} • {chunks} chunks indexed</div>
+                        <div style="background: rgba(0,0,0,0.02); border: 1px solid rgba(0,0,0,0.06); border-radius: 12px; padding: 10px 12px; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between;">
+                            <div>
+                                <div style="font-weight: 500; font-size: 0.88rem;">📄 {name}</div>
+                                <div style="font-size: 0.74rem; color: #747775;">{ext.upper()} • {chunks} chunks indexed</div>
                             </div>
-                            <div class="jivan-citation-count">{chunks}</div>
+                            <span style="background: rgba(66, 133, 244, 0.12); color: #1A73E8; font-weight: 600; font-size: 0.72rem; padding: 2px 8px; border-radius: 10px;">{chunks} chunks</span>
                         </div>
                         """,
                         unsafe_allow_html=True
                     )
             else:
-                # Default reference cards from reference design
                 st.markdown(
                     """
-                    <div class="jivan-source-card">
-                        <div class="jivan-doc-badge jivan-badge-pdf">📕</div>
-                        <div class="jivan-source-meta">
-                            <div class="jivan-source-title">Q2 Financial Report</div>
-                            <div class="jivan-source-subtitle">PDF • Page 12</div>
-                        </div>
-                        <div class="jivan-citation-count">1</div>
+                    <div style="background: rgba(0,0,0,0.02); border: 1px solid rgba(0,0,0,0.06); border-radius: 12px; padding: 10px 12px; margin-bottom: 8px;">
+                        <div style="font-weight: 500; font-size: 0.88rem;">📕 Q2 Financial Report.pdf</div>
+                        <div style="font-size: 0.74rem; color: #747775;">PDF • Page 12 • Grounded</div>
                     </div>
-
-                    <div class="jivan-source-card">
-                        <div class="jivan-doc-badge jivan-badge-xlsx">📗</div>
-                        <div class="jivan-source-meta">
-                            <div class="jivan-source-title">Enterprise Pipeline</div>
-                            <div class="jivan-source-subtitle">XLSX • Updated 5/14</div>
-                        </div>
-                        <div class="jivan-citation-count">2</div>
-                    </div>
-
-                    <div class="jivan-source-card">
-                        <div class="jivan-doc-badge jivan-badge-docx">📘</div>
-                        <div class="jivan-source-meta">
-                            <div class="jivan-source-title">Partner Contributions</div>
-                            <div class="jivan-source-subtitle">DOCX • Updated 5/10</div>
-                        </div>
-                        <div class="jivan-citation-count">1</div>
+                    <div style="background: rgba(0,0,0,0.02); border: 1px solid rgba(0,0,0,0.06); border-radius: 12px; padding: 10px 12px; margin-bottom: 8px;">
+                        <div style="font-weight: 500; font-size: 0.88rem;">📗 Enterprise Pipeline.xlsx</div>
+                        <div style="font-size: 0.74rem; color: #747775;">XLSX • Updated 5/14 • Grounded</div>
                     </div>
                     """,
                     unsafe_allow_html=True
                 )
 
-            # 'View all sources →' expander
-            with st.expander("View all sources →", expanded=False):
+            with st.expander("Manage all sources →", expanded=False):
                 st.caption("Active Knowledge Base Sources:")
                 all_docs = api_client.list_documents()
                 if all_docs:
@@ -101,33 +84,32 @@ def render_jivan_inspector():
                             api_client.delete_document(d["id"])
                             st.rerun()
                 else:
-                    st.caption("No custom documents uploaded yet. Use '📎 Attach Files' or Knowledge menu to add.")
+                    st.caption("No custom documents uploaded yet. Use '📎 Attach' or Knowledge menu to add.")
 
-        # 2. Details Section
-        user_email = st.session_state.get("user_email", "shubham@jivan.ai")
-        conv_id = st.session_state.get("conversation_id", "New Session")
-        time_str = datetime.now().strftime("%I:%M %p")
+        else:
+            user_email = st.session_state.get("user_email", "shubham@jivan.ai")
+            time_str = datetime.now().strftime("%I:%M %p")
 
-        st.markdown(
-            f"""
-            <div class="jivan-details-group">
-                <div class="jivan-detail-row">
-                    <span class="jivan-detail-label">Owner</span>
-                    <span class="jivan-detail-val">{user_email}</span>
+            st.markdown(
+                f"""
+                <div style="display: flex; flex-direction: column; gap: 14px; margin-top: 10px;">
+                    <div>
+                        <div style="font-size: 0.72rem; text-transform: uppercase; color: #747775; font-weight: 600;">Account</div>
+                        <div style="font-size: 0.88rem; font-weight: 500;">{user_email}</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 0.72rem; text-transform: uppercase; color: #747775; font-weight: 600;">Active Model</div>
+                        <div style="font-size: 0.88rem; font-weight: 500; color: #1A73E8;">✦ JIVAN 2.0 Flash (Groq + Claude + Canva)</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 0.72rem; text-transform: uppercase; color: #747775; font-weight: 600;">Session Time</div>
+                        <div style="font-size: 0.88rem; font-weight: 500;">Today {time_str}</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 0.72rem; text-transform: uppercase; color: #747775; font-weight: 600;">Data Privacy</div>
+                        <div style="font-size: 0.88rem; font-weight: 500;">🔒 Private & Enterprise Encrypted</div>
+                    </div>
                 </div>
-                <div class="jivan-detail-row">
-                    <span class="jivan-detail-label">Created</span>
-                    <span class="jivan-detail-val">Today {time_str}</span>
-                </div>
-                <div class="jivan-detail-row">
-                    <span class="jivan-detail-label">AI Engine</span>
-                    <span class="jivan-detail-val" style="color: #0D9488; font-weight: 600;">Claude • Canva • Banana</span>
-                </div>
-                <div class="jivan-detail-row">
-                    <span class="jivan-detail-label">Visibility</span>
-                    <span class="jivan-detail-val">🔒 Private</span>
-                </div>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
+                """,
+                unsafe_allow_html=True
+            )

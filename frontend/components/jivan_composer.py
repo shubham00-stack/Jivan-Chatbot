@@ -1,194 +1,145 @@
 """
-JIVAN Floating Composer Component
+JIVAN ChatGPT-Style Message Composer & File Attachment System
 Features:
-- Clean toggle-based action toolbar (no broken popover ligature words like 'expand_more')
-- Multi-file attachment tray (PDF, TXT, images, audio) with instant processing
-- Live microphone voice recording with Whisper transcription
-- Quick action pills for /image, /pdf, and /coping
-- Pure bright white card styling in bright mode
+- ONE single rounded message composer container matching ChatGPT UX
+- #212121 charcoal background (never pure black #000000)
+- Layout: [ + ] [ Ask JIVAN................ ] [ Microphone ] [ Send ↑ ]
+- Extreme Left: Plus (+) button opens floating dropdown menu ABOVE the composer:
+  * Option 1: Add Photos & Files (system file picker for multiple images, PDFs, Word, Excel, text)
+  * Option 2: Upload from Device (browse documents from device)
+  * Option 3: Take Photo (camera photo capture with graceful fallback)
+- Attachment Preview System:
+  * Displays small image thumbnails
+  * Displays document icons (PDF, Word, Excel, etc.), filenames, extensions, and file sizes
+  * Small (X) remove button on each attachment
+  * Dynamic vertical expansion when attachments are present
+- Voice recording via Web Audio MediaRecorder
+- Blue circular send button (#1D61D2) with upward arrow
+- Keyboard support: Enter to send, Shift+Enter for newline
 """
 
+import os
+import base64
+from pathlib import Path
 import streamlit as st
-from frontend.utils.api_client import api_client
+import streamlit.components.v1 as components
 
-def render_jivan_composer():
-    # Toolbar Action Row (5 clean, high-visibility pill buttons)
-    c1, c2, c3, c4, c5 = st.columns([0.20, 0.20, 0.20, 0.20, 0.20])
+# Declare the ChatGPT Composer custom component
+_COMPONENT_DIR = Path(__file__).parent / "chatgpt_composer"
+_chatgpt_composer = components.declare_component(
+    "jivan_chatgpt_composer",
+    path=str(_COMPONENT_DIR)
+)
 
-    with c1:
-        attach_active = st.session_state.get("show_attach_tray", False)
-        attach_label = "📎 Hide" if attach_active else "📎 Attach"
-        if st.button(attach_label, key="btn_toggle_attach", use_container_width=True, help="Attach files (PDF, images, audio)"):
-            st.session_state["show_attach_tray"] = not attach_active
-            st.session_state["show_voice_tray"] = False
-            st.rerun()
+def format_file_size(size_bytes: int) -> str:
+    """Formats file size into human-readable B, KB, or MB."""
+    if size_bytes < 1024:
+        return f"{size_bytes} B"
+    elif size_bytes < 1024 * 1024:
+        return f"{size_bytes / 1024:.1f} KB"
+    else:
+        return f"{size_bytes / (1024 * 1024):.1f} MB"
 
-    with c2:
-        voice_active = st.session_state.get("show_voice_tray", False)
-        voice_label = "🎙️ Hide" if voice_active else "🎙️ Voice"
-        if st.button(voice_label, key="btn_toggle_voice", use_container_width=True, help="Record audio voice note"):
-            st.session_state["show_voice_tray"] = not voice_active
-            st.session_state["show_attach_tray"] = False
-            st.rerun()
+def get_file_type_meta(filename: str):
+    """Returns (file_type, icon, extension_label) based on file extension."""
+    ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
+    if ext in ("png", "jpg", "jpeg", "webp", "gif"):
+        return "image", "🖼️", ext.upper()
+    elif ext in ("pdf",):
+        return "document", "📕", "PDF"
+    elif ext in ("docx", "doc"):
+        return "document", "📘", "DOCX"
+    elif ext in ("xlsx", "xls", "csv"):
+        return "document", "📗", ext.upper()
+    elif ext in ("pptx", "ppt"):
+        return "document", "📙", "PPTX"
+    elif ext in ("mp3", "wav", "m4a", "ogg"):
+        return "audio", "🎙️", ext.upper()
+    elif ext in ("txt", "md", "py", "json", "html"):
+        return "document", "📄", ext.upper()
+    else:
+        return "document", "📁", ext.upper() if ext else "FILE"
 
-    with c3:
-        if st.button("🍌 /image", key="btn_quick_image", use_container_width=True, help="Nano Banana AI Visual Studio"):
-            st.session_state["queued_prompt"] = "/image a futuristic cybernetic neon tiger in rainforest, 4k ultra detailed"
-            st.rerun()
+def stage_uploaded_files(uploaded_files) -> int:
+    """Safely stages multiple files into st.session_state['staged_attachments'] without duplicates."""
+    if not uploaded_files:
+        return 0
 
-    with c4:
-        if st.button("📊 /slides", key="btn_quick_slides", use_container_width=True, help="Canva AI Presentation Generator"):
-            st.session_state["queued_prompt"] = "/presentation Next-Generation Autonomous AI Agents & Enterprise Architecture"
-            st.rerun()
+    if "staged_attachments" not in st.session_state:
+        st.session_state["staged_attachments"] = []
 
-    with c5:
-        if st.button("💻 /code", key="btn_quick_code", use_container_width=True, help="Claude 3.5 Sonnet Coding Specialist"):
-            st.session_state["queued_prompt"] = "/code write an asynchronous web crawler with rate-limiting and retry logic in Python"
-            st.rerun()
+    current_ids = {att["id"] for att in st.session_state["staged_attachments"]}
+    added_count = 0
 
-    # 1. Attachment Drawer (Shown when '📎 Attach Files' is toggled)
-    if st.session_state.get("show_attach_tray"):
-        with st.container(border=True):
-            st.markdown("#### 📎 Attach Multiple Files")
-            st.caption("Upload documents, images, or audio recordings to process in this conversation.")
+    if not isinstance(uploaded_files, (list, tuple)):
+        uploaded_files = [uploaded_files]
 
-            device_files = st.file_uploader(
-                "Choose files (PDF, TXT, Images, Audio):",
-                type=["pdf", "txt", "png", "jpg", "jpeg", "webp", "mp3", "wav", "m4a"],
-                accept_multiple_files=True,
-                key="jivan_multi_file_uploader_tray"
-            )
+    for f in uploaded_files:
+        if not f:
+            continue
+        file_id = f"{f.name}_{f.size}"
+        if file_id in current_ids:
+            continue
 
-            instruction = st.text_input(
-                "Instruction for attached files (optional):",
-                placeholder="e.g. summarize these documents, analyze chart",
-                key="jivan_file_instruction_tray"
-            )
+        if f.size > 25 * 1024 * 1024:
+            st.toast(f"File '{f.name}' exceeds the 25 MB limit.", icon="⚠️")
+            continue
 
-            col_proc, col_close = st.columns([0.7, 0.3])
-            with col_proc:
-                if device_files and st.button(f"🚀 Upload & Process {len(device_files)} File(s)", type="primary", use_container_width=True, key="btn_proc_files_tray"):
-                    with st.spinner("Processing attached files..."):
-                        docs = [f for f in device_files if f.name.rsplit(".", 1)[-1].lower() in ("pdf", "txt", "md")]
-                        imgs = [f for f in device_files if f.name.rsplit(".", 1)[-1].lower() in ("png", "jpg", "jpeg", "webp")]
-                        audios = [f for f in device_files if f.name.rsplit(".", 1)[-1].lower() in ("mp3", "wav", "m4a")]
+        file_type, icon, ext_label = get_file_type_meta(f.name)
+        file_bytes = f.getvalue() if hasattr(f, "getvalue") else f.read()
 
-                        conv_id = st.session_state.get("conversation_id")
-                        user_email = st.session_state.get("user_email", "shubham@jivan.ai")
+        b64_thumb = None
+        if file_type == "image":
+            try:
+                b64_thumb = base64.b64encode(file_bytes).decode("utf-8")
+            except Exception:
+                b64_thumb = None
 
-                        # Process Documents
-                        if docs:
-                            payload = [(d.name, d.getvalue()) for d in docs]
-                            api_client.upload_multiple_documents(payload)
-                            doc_names = ", ".join([d.name for d in docs])
-                            st.session_state["messages"].append({
-                                "role": "user",
-                                "content": f"📎 Attached {len(docs)} document(s): `{doc_names}`" + (f"\n\n**Note**: {instruction}" if instruction else ""),
-                                "modality": "document"
-                            })
-                            query = instruction or f"Please summarize the main insights from: {doc_names}"
-                            res = api_client.send_chat_message(
-                                message=query,
-                                conversation_id=conv_id,
-                                enable_emotional_support=False,
-                                enable_rag=True,
-                                user_email=user_email
-                            )
-                            st.session_state["conversation_id"] = res["conversation_id"]
-                            st.session_state["messages"].append({
-                                "id": res["message_id"],
-                                "role": "assistant",
-                                "content": res["response"],
-                                "modality": "text",
-                                "metadata": {"citations": res.get("citations", [])}
-                            })
+        st.session_state["staged_attachments"].append({
+            "id": file_id,
+            "name": f.name,
+            "size": f.size,
+            "size_str": format_file_size(f.size),
+            "ext": ext_label,
+            "icon": icon,
+            "type": file_type,
+            "bytes": file_bytes,
+            "b64": b64_thumb
+        })
+        current_ids.add(file_id)
+        added_count += 1
 
-                        # Process Images
-                        for img in imgs:
-                            img_prompt = instruction or "Please analyze and describe this visual in detail."
-                            res = api_client.send_image_message(
-                                file_bytes=img.getvalue(),
-                                filename=img.name,
-                                prompt=img_prompt,
-                                conversation_id=conv_id
-                            )
-                            st.session_state["conversation_id"] = res["conversation_id"]
-                            st.session_state["messages"].append({
-                                "role": "user",
-                                "content": f"🖼️ Analyzed image `{img.name}`: {img_prompt}",
-                                "modality": "image"
-                            })
-                            st.session_state["messages"].append({
-                                "id": res["message_id"],
-                                "role": "assistant",
-                                "content": res["response"],
-                                "modality": "text"
-                            })
+    return added_count
 
-                        # Process Audio
-                        for aud in audios:
-                            res = api_client.send_audio_message(
-                                file_bytes=aud.getvalue(),
-                                filename=aud.name,
-                                conversation_id=conv_id
-                            )
-                            st.session_state["conversation_id"] = res["conversation_id"]
-                            st.session_state["messages"].append({
-                                "role": "user",
-                                "content": f"🎙️ Audio memo `{aud.name}`: *\"{res.get('transcript', '')}\"*",
-                                "modality": "audio"
-                            })
-                            st.session_state["messages"].append({
-                                "id": res["message_id"],
-                                "role": "assistant",
-                                "content": res["response"],
-                                "modality": "text"
-                            })
+def render_jivan_composer(key: str = None):
+    """
+    Renders ONE single rounded message composer:
+    [ + ] [ Ask JIVAN................ ] [ Microphone ] [ Send ↑ ]
+    Returns submission dict when user sends a message, or None.
+    Uses dynamic turn-based keying to guarantee a fresh, responsive composer on every turn.
+    """
+    theme_mode = st.session_state.get("theme_mode", "light")
+    queued = st.session_state.get("queued_prompt", "")
+    
+    if key is None:
+        turn_id = len(st.session_state.get("messages", []))
+        key = f"jivan_chatgpt_composer_turn_{turn_id}"
 
-                        st.session_state["show_attach_tray"] = False
-                        st.toast("Files processed successfully!", icon="✅")
-                        st.rerun()
+    # Render the ChatGPT custom composer component
+    composer_data = _chatgpt_composer(
+        key=key,
+        theme=theme_mode,
+        default_prompt=queued,
+        default=None
+    )
+    return composer_data
 
-            with col_close:
-                if st.button("Close", key="btn_close_attach_tray", use_container_width=True):
-                    st.session_state["show_attach_tray"] = False
-                    st.rerun()
+def render_jivan_disclaimer():
+    """Renders the standard AI disclaimer footer."""
+    st.markdown(
+        '<div class="gemini-disclaimer">JIVAN may display inaccurate info, including about people, so double-check its responses.</div>',
+        unsafe_allow_html=True
+    )
 
-    # 2. Voice Drawer (Shown when '🎙️ Voice Note' is toggled)
-    if st.session_state.get("show_voice_tray"):
-        with st.container(border=True):
-            st.markdown("#### 🎙️ Voice Input (Groq Whisper)")
-            st.caption("Record your voice note or query below:")
-
-            audio_data = st.audio_input("Record voice query:", key="jivan_voice_audio_in_tray")
-            col_v1, col_v2 = st.columns([0.7, 0.3])
-            with col_v1:
-                if audio_data and st.button("🚀 Transcribe & Submit", type="primary", use_container_width=True, key="btn_submit_voice_tray"):
-                    with st.spinner("Transcribing speech with Whisper..."):
-                        conv_id = st.session_state.get("conversation_id")
-                        user_email = st.session_state.get("user_email", "shubham@jivan.ai")
-                        res = api_client.send_audio_message(
-                            file_bytes=audio_data.getvalue(),
-                            filename="recording.wav",
-                            conversation_id=conv_id,
-                            enable_tts=st.session_state.get("enable_tts", False)
-                        )
-                        st.session_state["conversation_id"] = res["conversation_id"]
-                        st.session_state["messages"].append({
-                            "role": "user",
-                            "content": f"🎙️ Voice query: *\"{res.get('transcript', '')}\"*",
-                            "modality": "audio"
-                        })
-                        st.session_state["messages"].append({
-                            "id": res["message_id"],
-                            "role": "assistant",
-                            "content": res["response"],
-                            "modality": "text",
-                            "audio_base64": res.get("audio_base64")
-                        })
-                        st.session_state["show_voice_tray"] = False
-                        st.rerun()
-            with col_v2:
-                if st.button("Close", key="btn_close_voice_tray", use_container_width=True):
-                    st.session_state["show_voice_tray"] = False
-                    st.rerun()
+# Alias for topbar theme toggle helper
+from frontend.components.jivan_chat import render_jivan_topbar_theme_toggle
